@@ -1,5 +1,5 @@
 module.exports = {
-  pathPrefix: '/running',
+  pathPrefix: '/running_page',
   siteMetadata: {
     siteTitle: 'Running Page',
     siteUrl: 'https://sunroof.zhengzhicheng.com/',
