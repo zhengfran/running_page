@@ -21,6 +21,7 @@ import {
   MAP_HEIGHT,
   PRIVACY_MODE,
   LIGHTS_ON,
+  MAIN_COLOR,
 } from '@/utils/const';
 import { Coordinate, IViewState, geoJsonForMap } from '@/utils/utils';
 import RunMarker from './RunMarker';
@@ -154,7 +155,7 @@ const RunMap = ({
     [startLon, startLat] = points[0];
     [endLon, endLat] = points[points.length - 1];
   }
-  let dash = USE_DASH_LINE && !isSingleRun && !isBigMap ? [2, 2] : [2, 0];
+  const dash = USE_DASH_LINE && !isSingleRun && !isBigMap ? [2, 2] : null;
   const onMove = React.useCallback(
     ({ viewState }: { viewState: IViewState }) => {
       setViewState(viewState);
@@ -208,9 +209,9 @@ const RunMap = ({
           id="runs2"
           type="line"
           paint={{
-            'line-color': ['get', 'color'],
-            'line-width': isBigMap && lights ? 1 : 2,
-            'line-dasharray': dash,
+            'line-color': ['coalesce', ['get', 'color'], MAIN_COLOR],
+            'line-width': isSingleRun ? 4 : isBigMap && lights ? 1 : 2,
+            ...(dash ? { 'line-dasharray': dash } : {}),
             'line-opacity':
               isSingleRun || isBigMap || !lights ? 1 : LINE_OPACITY,
             'line-blur': 1,
