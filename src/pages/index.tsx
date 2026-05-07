@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import Layout from '@/components/Layout';
 import LocationStat from '@/components/LocationStat';
@@ -36,11 +36,18 @@ const Index = () => {
   const [geoData, setGeoData] = useState(geoJsonForRuns(runs));
   // for auto zoom
   const bounds = getBoundsForGeoData(geoData);
-  const [intervalId, setIntervalId] = useState<number>();
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   const [viewState, setViewState] = useState<IViewState>({
     ...bounds,
   });
+
+  const clearAnimation = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = undefined;
+    }
+  };
 
   const changeByItem = (
     item: string,
@@ -67,7 +74,7 @@ const Index = () => {
     }
 
     changeByItem(y, 'Year', filterYearRuns);
-    clearInterval(intervalId);
+    clearAnimation();
   };
 
   const changeCity = (city: string) => {
@@ -96,7 +103,7 @@ const Index = () => {
     }
     setGeoData(geoJsonForRuns(selectedRuns));
     setTitle(titleForShow(lastRun));
-    clearInterval(intervalId);
+    clearAnimation();
     scrollToMap();
   };
 
@@ -111,16 +118,19 @@ const Index = () => {
     // maybe change 20 ?
     const sliceNume = runsNum >= 20 ? runsNum / 20 : 1;
     let i = sliceNume;
+    clearAnimation();
     const id = setInterval(() => {
       if (i >= runsNum) {
-        clearInterval(id);
+        clearAnimation();
       }
 
       const tempRuns = runs.slice(0, i);
       setGeoData(geoJsonForRuns(tempRuns));
       i += sliceNume;
     }, 100);
-    setIntervalId(id);
+    intervalRef.current = id;
+
+    return clearAnimation;
   }, [runs]);
 
   useEffect(() => {

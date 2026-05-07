@@ -1,5 +1,4 @@
 @media only screen and (max-width: 700px) {
-
   /* 当屏幕宽度小于 700px 时 */
   .runTable th:nth-child(4),
   .runTable td:nth-child(4) {
@@ -21,6 +20,22 @@
       padding: 0.5rem;
     }
   }
+}
+
+.sortButton {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.sortButton:focus-visible,
+.runRow:focus-visible {
+  outline: 2px solid red;
+  outline-offset: 2px;
 }
 
 .runRow {

@@ -42,7 +42,7 @@ R.I.P. 希望大家都能健康顺利的跑过终点，逝者安息。
 | [zhubao315](https://github.com/zhubao315)         | <https://zhubao315.github.io/running>          | Strava      |
 | [shaonianche](https://github.com/shaonianche)     | <https://run.duanfei.org>                      | Strava      |
 | [yihong0618](https://github.com/yihong0618)       | <https://yihong.run>                           | Nike        |
-| [superleeyom](https://github.com/superleeyom)     | <https://running.leeyom.top>                   | Strava        |
+| [superleeyom](https://github.com/superleeyom)     | <https://running.leeyom.top>                   | Strava      |
 | [geekplux](https://github.com/geekplux)           | <https://activities.geekplux.com>              | Nike        |
 | [guanlan](https://github.com/guanlan)             | <https://grun.vercel.app>                      | Strava      |
 | [tuzimoe](https://github.com/tuzimoe)             | <https://run.tuzi.moe>                         | Nike        |
@@ -106,6 +106,7 @@ R.I.P. 希望大家都能健康顺利的跑过终点，逝者安息。
 | [laqieer](https://github.com/laqieer)             | <https://laqieer.github.io/running_page/>      | Strava      |
 | [Guoxin](https://github.com/guoxinl)              | <https://running.guoxin.space/>                | Strava      |
 | [Darren](https://github.com/Flavored4179)         | <https://run.wdoc.top/>                        | tcx         |
+
 </details>
 
 ## 它是怎么工作的
@@ -155,6 +156,7 @@ R.I.P. 希望大家都能健康顺利的跑过终点，逝者安息。
 - **[Garmin_to_Strava(Using Garmin Run, Strava backup data)](#garmin_to_strava)**
 - **[Strava_to_Garmin(Using Strava Run, Garmin backup data)](#strava_to_garmin)**
 - **[Coros高驰](#Coros高驰)**
+
 ## 视频教程
 
 - https://www.youtube.com/watch?v=reLiY9p8EJk
@@ -207,14 +209,13 @@ docker run -itd -p 80:80   running_page:latest
 
 ## 替换 Mapbox token
 
-> 建议有能力的同学把 `src/utils/const.ts` 文件中的 Mapbox token 自己的 [Mapbox token](https://www.mapbox.com/)
+> 建议有能力的同学把自己的 [Mapbox token](https://www.mapbox.com/) 设置为构建时环境变量。
 
 > 如果你是海外用户请更改 `IS_CHINESE = false` in `src/utils/const.ts`
 
-```typescript
-const MAPBOX_TOKEN =
-  'pk.eyJ1IjoieWlob25nMDYxOCIsImEiOiJja2J3M28xbG4wYzl0MzJxZm0ya2Fua2p2In0.PNKfkeQwYuyGOTT_x9BJ4Q';
-```
+前端构建前设置 `VITE_MAPBOX_TOKEN`。如果使用 GitHub Pages，可以在仓库 Secrets 中添加 `MAPBOX_TOKEN`，项目内的 GitHub Actions workflow 会自动映射为 `VITE_MAPBOX_TOKEN`。如果使用 Vercel 或其他 preview 部署平台，也需要在对应平台的环境变量中添加 `VITE_MAPBOX_TOKEN`；GitHub 仓库 Secrets 不会自动传给外部 preview 平台。
+
+如果没有配置 `VITE_MAPBOX_TOKEN`，页面会 fallback 到不需要 token 的 CARTO dark 底图，避免地图空白。
 
 ## 个性化设置
 
@@ -349,7 +350,7 @@ python3(python) run_page/keep_sync.py ${your mobile} ${your password} --with-gpx
 示例：
 
 ```bash
-python3(python) run_page/keep_sync.py 13333xxxx example --with-gpx 
+python3(python) run_page/keep_sync.py 13333xxxx example --with-gpx
 ```
 
 > 增加了 keep 对其他运动类型的支持，目前可选的有running, cycling, hiking，默认的运动数据类型为running。
@@ -363,7 +364,6 @@ python3(python) run_page/keep_sync.py ${your mobile} ${your password} --with-gpx
 ```bash
 python3(python) run_page/keep_sync.py 13333xxxx example --with-gpx --sync-types running cycling hiking
 ```
-
 
 </details>
 
@@ -439,7 +439,7 @@ python3(python) run_page/joyrun_sync.py 1393xx30xxxx 97e5fe4997d20f9b1007xxxxx -
 > 支持配置min_grid_distance，默认为10
 
 ```bash
-python3(python) run_page/joyrun_sync.py 13333xxxx xxxx --athlete yihong0618 --min_grid_distance 5 
+python3(python) run_page/joyrun_sync.py 13333xxxx xxxx --athlete yihong0618 --min_grid_distance 5
 ```
 
 </details>
@@ -617,7 +617,7 @@ python3(python) run_page/garmin_sync.py xxxxxxxxxx --is-cn --only-run
 <br>
 
 - 如果你只想同步 `type running` 使用参数 --only-run
-**The Python version must be >=3.10**
+  **The Python version must be >=3.10**
 
 #### 获取佳明 CN 的密钥
 
@@ -668,6 +668,7 @@ python3(python) run_page/garmin_sync_cn_global.py ${garmin_cn_secret_string} ${g
 ```bash
 python3(python) run_page/nike_sync.py aaaaa
 ```
+
 ![tg_image_166091873](https://github.com/user-attachments/assets/9d4851d6-849a-4bb7-8ffe-5358fa7328b2)
 
 如果你想自动化同步NRC中的运动数据,去 [issue692](https://github.com/yihong0618/running_page/issues/692#issuecomment-2218849713)中查看相关内容.
@@ -974,28 +975,32 @@ python run_page/coros_sync.py ${{ secrets.COROS_ACCOUNT }} ${{ secrets.COROS_PAS
 </details>
 
 ### Keep_to_Strava
+
 <details>
 <summary>获取您的Keep数据，然后同步到Strava</summary>
 
 示例:
+
 ```bash
 python3(python) run_page/keep_to_strava_sync.py ${your mobile} ${your password} ${client_id} ${client_secret} ${strava_refresh_token} --sync-types running cycling hiking
 ```
 
 #### 解决的需求：
+
 1. 适用于由Strava总览/展示数据，但是有多种运动类型，且数据来自不同设备的用户。
 2. 适用于期望将华为运动健康/OPPO健康等数据同步到Strava的用户(前提是手机APP端已经开启了和Keep之间的数据同步)。
 3. 理论上华为/OPPO等可以通过APP同步到Keep的设备，均可通过此方法自动同步到Strava，目前已通过测试的APP有
-    - 华为运动健康: 户外跑步，户外骑行，户外步行。
+   - 华为运动健康: 户外跑步，户外骑行，户外步行。
 
 #### 特性以及使用细节:
+
 1. 与Keep相似，但是由keep_to_strava_sync.py实现，不侵入data.db 与 activities.json。因此不会出现由于同时使用keep_sync和strava_sync而导致的数据重复统计/展示问题。
 2. 上传至Strava时，会自动识别为Strava中相应的运动类型, 目前支持的运动类型为running, cycling, hiking。
 3. run_data_sync.yml中的修改：
 
-    ```yaml
-    RUN_TYPE: keep_to_starva_sync
-    ```
+   ```yaml
+   RUN_TYPE: keep_to_starva_sync
+   ```
 
 </details>
 
@@ -1090,12 +1095,11 @@ python3(python) run_page/gen_svg.py --from-db --type circular --use-localtime
 
 4. 为 GitHub Actions 添加代码提交权限，访问仓库的 `Settings > Actions > General`页面，找到 `Workflow permissions` 的设置项，将选项配置为 `Read and write permissions`，支持 CI 将运动数据更新后提交到仓库中。
 
-
 5. 如果想把你的 running_page 部署在 xxx.github.io 而不是 xxx.github.io/run_page 亦或是想要添加自定义域名于 GitHub Pages，需要做三点
 
--  修改你的 fork 的 running_page 仓库改名为 xxx.github.io, xxx 是你 github 的 username
--  修改 gh-pages.yml 中的 Build 模块，删除 `${{ github.event.repository.name }}` 改为`run: PATH_PREFIX=/ pnpm build` 即可
--  修改 src/static/site-metadata.ts 中 `siteUrl: ''` 或是添加你的自定义域名，`siteUrl: '[your_own_domain]'`， 即可
+- 修改你的 fork 的 running_page 仓库改名为 xxx.github.io, xxx 是你 github 的 username
+- 修改 gh-pages.yml 中的 Build 模块，删除 `${{ github.event.repository.name }}` 改为`run: PATH_PREFIX=/ pnpm build` 即可
+- 修改 src/static/site-metadata.ts 中 `siteUrl: ''` 或是添加你的自定义域名，`siteUrl: '[your_own_domain]'`， 即可
 
 </details>
 

@@ -22,6 +22,9 @@ on:
         required: true
         type: string
         default: track_data
+    secrets:
+      MAPBOX_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -97,6 +100,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Build
+        env:
+          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: PATH_PREFIX=/${{ github.event.repository.name }} pnpm build
 
       - name: Upload artifact
