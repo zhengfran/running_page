@@ -5,6 +5,8 @@ import {
   convertMovingTime2Sec,
   Activity,
   RunIds,
+  RUN_TYPE_ORDER,
+  classifyRunType,
 } from '@/utils/utils';
 import RunRow from './RunRow';
 import styles from './style.module.css';
@@ -48,7 +50,15 @@ const RunTable = ({
   };
   const sortDateFuncClick =
     sortFuncInfo === 'Date' ? sortDateFunc : sortDateFuncReverse;
+  const sortTypeFunc: SortFunc = (a, b) => {
+    const aType = classifyRunType(a, runs);
+    const bType = classifyRunType(b, runs);
+    return sortFuncInfo === 'Type'
+      ? RUN_TYPE_ORDER.indexOf(aType) - RUN_TYPE_ORDER.indexOf(bType)
+      : RUN_TYPE_ORDER.indexOf(bType) - RUN_TYPE_ORDER.indexOf(aType);
+  };
   const sortFuncMap = new Map([
+    ['Type', sortTypeFunc],
     ['KM', sortKMFunc],
     ['Pace', sortPaceFunc],
     ['BPM', sortBPMFunc],
@@ -94,6 +104,7 @@ const RunTable = ({
               elementIndex={elementIndex}
               locateActivity={locateActivity}
               run={run}
+              runType={classifyRunType(run, runs)}
               runIndex={runIndex}
               setRunIndex={setRunIndex}
             />
