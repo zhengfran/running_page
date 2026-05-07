@@ -13,6 +13,7 @@ import {
   MAP_LAYER_LIST,
   IS_CHINESE,
   ROAD_LABEL_DISPLAY,
+  MAPBOX_TOKEN,
   PROVINCE_FILL_COLOR,
   COUNTRY_FILL_COLOR,
   USE_DASH_LINE,
@@ -31,7 +32,7 @@ import { RPGeometry } from '@/static/run_countries';
 import './mapbox.css';
 import LightsControl from '@/components/RunMap/LightsControl';
 
-const DARK_MAP_STYLE: Style = {
+const CARTO_DARK_STYLE: Style = {
   version: 8,
   sources: {
     'carto-dark': {
@@ -170,14 +171,18 @@ const RunMap = ({
     right: '0px',
     opacity: 0.3,
   };
+  const mapStyle = MAPBOX_TOKEN
+    ? 'mapbox://styles/mapbox/dark-v10'
+    : CARTO_DARK_STYLE;
 
   return (
     <Map
       {...viewState}
       onMove={onMove}
       style={style}
-      mapStyle={DARK_MAP_STYLE}
+      mapStyle={mapStyle}
       ref={mapRefCallback}
+      mapboxAccessToken={MAPBOX_TOKEN || undefined}
     >
       <RunMapButtons changeYear={changeYear} thisYear={thisYear} />
       <Source id="data" type="geojson" data={geoData}>
