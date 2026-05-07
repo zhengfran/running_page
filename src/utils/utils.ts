@@ -4,7 +4,12 @@ import { WebMercatorViewport } from 'viewport-mercator-project';
 import { chinaGeojson, RPGeometry } from '@/static/run_countries';
 import worldGeoJson from '@surbowl/world-geo-json-zh/world.zh.json';
 import { chinaCities } from '@/static/city';
-import { MAIN_COLOR, MUNICIPALITY_CITIES_ARR, NEED_FIX_MAP, RUN_TITLES } from './const';
+import {
+  MAIN_COLOR,
+  MUNICIPALITY_CITIES_ARR,
+  NEED_FIX_MAP,
+  RUN_TITLES,
+} from './const';
 import { FeatureCollection, LineString } from 'geojson';
 
 export type Coordinate = [number, number];
@@ -25,6 +30,91 @@ export interface Activity {
   average_speed: number;
   streak: number;
 }
+
+export type RunType = 'easy' | 'interval' | 'threshold' | 'long run' | 'race';
+
+const RUN_TYPE_ORDER: RunType[] = [
+  'easy',
+  'interval',
+  'threshold',
+  'long run',
+  'race',
+];
+
+const percentile = (values: number[], p: number): number => {
+  if (!values.length) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.floor(p * sorted.length))
+  );
+  return sorted[index];
+};
+
+const classifyRunType = (run: Activity, runs: Activity[]): RunType => {
+  const name = run.name.toLowerCase();
+  const distanceKm = run.distance / 1000;
+  const runSeconds = convertMovingTime2Sec(run.moving_time);
+  const comparableRuns = runs.filter(
+    (item) => item.distance > 1000 && item.average_speed > 0
+  );
+
+  if (!comparableRuns.length || !run.average_speed) {
+    return distanceKm >= 16 ? 'long run' : 'easy';
+  }
+
+  const distances = comparableRuns.map((item) => item.distance / 1000);
+  const speeds = comparableRuns.map((item) => item.average_speed);
+
+  const medianDistance = percentile(distances, 0.5);
+  const longDistanceCutoff = Math.max(
+    16,
+    percentile(distances, 0.85),
+    medianDistance * 1.6
+  );
+  const fastCutoff = percentile(speeds, 0.75);
+  const veryFastCutoff = percentile(speeds, 0.9);
+
+  if (
+    /\b(race|marathon|half marathon|5k|10k|parkrun)\b|比赛|赛事|竞赛|马拉松/.test(
+      name
+    )
+  ) {
+    return 'race';
+  }
+
+  if (
+    /\b(interval|repeat|repeats|fartlek|yasso|stride|strides)\b|间歇|变速|冲刺/.test(
+      name
+    )
+  ) {
+    return 'interval';
+  }
+
+  if (distanceKm >= longDistanceCutoff) {
+    return 'long run';
+  }
+
+  if (
+    run.average_speed >= veryFastCutoff &&
+    distanceKm <= Math.max(12, medianDistance * 1.2) &&
+    runSeconds <= 60 * 60
+  ) {
+    return 'interval';
+  }
+
+  if (/\b(threshold|tempo|steady)\b|阈值|乳酸|节奏/.test(name)) {
+    return 'threshold';
+  }
+
+  if (run.average_speed >= fastCutoff && distanceKm >= 5) {
+    return 'threshold';
+  }
+
+  return 'easy';
+};
 
 const titleForShow = (run: Activity): string => {
   const date = run.start_date_local.slice(0, 11);
@@ -183,9 +273,9 @@ const geoJsonForRuns = (runs: Activity[]): FeatureCollection<LineString> => ({
 });
 
 const geoJsonForMap = (): FeatureCollection<RPGeometry> => ({
-    type: 'FeatureCollection',
-    features: worldGeoJson.features.concat(chinaGeojson.features),
-  })
+  type: 'FeatureCollection',
+  features: worldGeoJson.features.concat(chinaGeojson.features),
+});
 
 const titleForRun = (run: Activity): string => {
   const runDistance = run.distance / 1000;
@@ -306,4 +396,6 @@ export {
   getBoundsForGeoData,
   formatRunTime,
   convertMovingTime2Sec,
+  classifyRunType,
+  RUN_TYPE_ORDER,
 };

@@ -5,6 +5,7 @@ import {
   formatRunTime,
   Activity,
   RunIds,
+  RunType,
 } from '@/utils/utils';
 import styles from './style.module.css';
 
@@ -12,6 +13,7 @@ interface IRunRowProperties {
   elementIndex: number;
   locateActivity: (_runIds: RunIds) => void;
   run: Activity;
+  runType: RunType;
   runIndex: number;
   setRunIndex: (_ndex: number) => void;
 }
@@ -20,6 +22,7 @@ const RunRow = ({
   elementIndex,
   locateActivity,
   run,
+  runType,
   runIndex,
   setRunIndex,
 }: IRunRowProperties) => {
@@ -57,6 +60,9 @@ const RunRow = ({
       tabIndex={0}
     >
       <td>{runTitle}</td>
+      <td>
+        <span className={styles.runType}>{runType}</span>
+      </td>
       <td>{distance}</td>
       <td>{paceParts || '—'}</td>
       <td>{heartRate && heartRate.toFixed(0)}</td>
