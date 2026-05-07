@@ -1,4 +1,11 @@
-import { formatPace, titleForRun, formatRunTime, Activity, RunIds } from '@/utils/utils';
+import type React from 'react';
+import {
+  formatPace,
+  titleForRun,
+  formatRunTime,
+  Activity,
+  RunIds,
+} from '@/utils/utils';
 import styles from './style.module.css';
 
 interface IRunRowProperties {
@@ -9,30 +16,49 @@ interface IRunRowProperties {
   setRunIndex: (_ndex: number) => void;
 }
 
-const RunRow = ({ elementIndex, locateActivity, run, runIndex, setRunIndex }: IRunRowProperties) => {
+const RunRow = ({
+  elementIndex,
+  locateActivity,
+  run,
+  runIndex,
+  setRunIndex,
+}: IRunRowProperties) => {
   const distance = (run.distance / 1000.0).toFixed(2);
   const paceParts = run.average_speed ? formatPace(run.average_speed) : null;
   const heartRate = run.average_heartrate;
   const runTime = formatRunTime(run.moving_time);
+  const runTitle = titleForRun(run);
   const handleClick = () => {
     if (runIndex === elementIndex) {
       setRunIndex(-1);
       locateActivity([]);
-      return
-    };
+      return;
+    }
     setRunIndex(elementIndex);
     locateActivity([run.run_id]);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick();
+    }
   };
 
   return (
     <tr
       className={`${styles.runRow} ${runIndex === elementIndex ? styles.selected : ''}`}
       key={run.start_date_local}
+      aria-label={`Show ${runTitle} on map`}
+      aria-pressed={runIndex === elementIndex}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
     >
-      <td>{titleForRun(run)}</td>
+      <td>{runTitle}</td>
       <td>{distance}</td>
-      {paceParts && <td>{paceParts}</td>}
+      <td>{paceParts || '—'}</td>
       <td>{heartRate && heartRate.toFixed(0)}</td>
       <td>{runTime}</td>
       <td className={styles.runDate}>{run.start_date_local}</td>

@@ -57,12 +57,19 @@ const RunTable = ({
   ]);
 
   const handleClick: React.MouseEventHandler<HTMLElement> = (e) => {
-    const funcName = (e.target as HTMLElement).innerHTML;
+    const funcName = (e.currentTarget as HTMLElement).dataset.sort;
+    if (!funcName) {
+      return;
+    }
+
     const f = sortFuncMap.get(funcName);
+    if (!f) {
+      return;
+    }
 
     setRunIndex(-1);
     setSortFuncInfo(sortFuncInfo === funcName ? '' : funcName);
-    setActivity(runs.sort(f));
+    setActivity([...runs].sort(f));
   };
 
   return (
@@ -72,8 +79,10 @@ const RunTable = ({
           <tr>
             <th />
             {Array.from(sortFuncMap.keys()).map((k) => (
-              <th key={k} onClick={handleClick}>
-                {k}
+              <th key={k} data-sort={k} onClick={handleClick}>
+                <button className={styles.sortButton} type="button">
+                  {k}
+                </button>
               </th>
             ))}
           </tr>
