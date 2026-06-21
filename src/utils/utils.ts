@@ -18,6 +18,8 @@ export type RunIds = Array<number> | [];
 
 export interface Activity {
   run_id: number;
+  source?: string;
+  source_activity_id?: string;
   name: string;
   distance: number;
   moving_time: string;

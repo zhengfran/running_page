@@ -1,0 +1,142 @@
+name: Garmin Publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Commit validated public data and deploy the page
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: garmin-publication
+  cancel-in-progress: false
+
+env:
+  GARMIN_CUTOVER: '2026-06-05T11:01:14+00:00'
+  IGNORE_START_END_RANGE: 10
+  IGNORE_POLYLINE: 'ktjrFoemeU~IorGq}DeB'
+  IGNORE_RANGE: 10
+  ATHLETE: Zhicheng
+  TITLE: Zhicheng is running
+  TITLE_GRID: Over 10km Runs
+  MIN_GRID_DISTANCE: 10
+
+jobs:
+  archive_validate_publish:
+    name: Archive and validate Garmin Runs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run pipeline tests
+        run: pytest -q
+
+      - name: Load FIT archive deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.FIT_ARCHIVE_SSH_KEY }}
+
+      - name: Clone private FIT archive
+        run: git clone git@github.com:zhengfran/running-fit-archive.git "$RUNNER_TEMP/running-fit-archive"
+
+      - name: Prepare Garmin archive batch
+        env:
+          GARMIN_SECRET_STRING: ${{ secrets.GARMIN_SECRET_STRING }}
+        run: |
+          python run_page/garmin_publish.py prepare \
+            --archive-dir "$RUNNER_TEMP/running-fit-archive" \
+            --batch-file "$RUNNER_TEMP/garmin-batch.json" \
+            --cutover "$GARMIN_CUTOVER"
+
+      - name: Commit and push FIT archive first
+        working-directory: ${{ runner.temp }}/running-fit-archive
+        run: |
+          git config user.name "running_page"
+          git config user.email "zhicheng.ink98@gmail.com"
+          git add garmin manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "archive new Garmin runs"
+            git push origin main
+          fi
+
+      - name: Normalize and validate public data
+        run: |
+          python run_page/garmin_publish.py publish \
+            --archive-dir "$RUNNER_TEMP/running-fit-archive" \
+            --batch-file "$RUNNER_TEMP/garmin-batch.json"
+
+      - name: Generate public SVGs
+        run: |
+          python run_page/gen_svg.py --from-db --title "$TITLE" --type github --athlete "$ATHLETE" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5
+          python run_page/gen_svg.py --from-db --title "$TITLE_GRID" --type grid --athlete "$ATHLETE" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20 --special-distance2 40 --use-localtime --min-distance "$MIN_GRID_DISTANCE"
+          python run_page/gen_svg.py --from-db --type circular --use-localtime
+          python run_page/gen_svg.py --from-db --year "$(date +"%Y")" --language zh_CN --title "$(date +"%Y") Running" --type github --athlete "$ATHLETE" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output "assets/github_$(date +"%Y").svg" --use-localtime --min-distance 0.5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        env:
+          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: PATH_PREFIX=/${{ github.event.repository.name }} pnpm build
+
+      - name: Upload candidate public artifacts
+        if: ${{ inputs.publish == false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: garmin-publication-candidate
+          retention-days: 7
+          path: |
+            run_page/data.db
+            src/static/activities.json
+            assets/*.svg
+
+      - name: Commit validated public data
+        if: ${{ inputs.publish }}
+        run: |
+          git config user.name "running_page"
+          git config user.email "zhicheng.ink98@gmail.com"
+          git add run_page/data.db src/static/activities.json assets
+          if ! git diff --cached --quiet; then
+            git commit -m "publish new Garmin runs"
+            git push origin master
+          fi
+
+  deploy_pages:
+    if: ${{ inputs.publish }}
+    needs: archive_validate_publish
+    uses: ./.github/workflows/gh-pages.yml
+    with:
+      save_data_in_github_cache: false
+      data_cache_prefix: track_data
+    secrets: inherit

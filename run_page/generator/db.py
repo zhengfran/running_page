@@ -5,7 +5,16 @@ import time
 
 import geopy
 from geopy.geocoders import Nominatim
-from sqlalchemy import Column, Float, Integer, Interval, String, create_engine
+from sqlalchemy import (
+    Column,
+    Float,
+    Integer,
+    Interval,
+    String,
+    create_engine,
+    inspect,
+    text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -25,6 +34,8 @@ g = Nominatim(user_agent=randomword())
 
 ACTIVITY_KEYS = [
     "run_id",
+    "source",
+    "source_activity_id",
     "name",
     "distance",
     "moving_time",
@@ -42,6 +53,8 @@ class Activity(Base):
     __tablename__ = "activities"
 
     run_id = Column(Integer, primary_key=True)
+    source = Column(String)
+    source_activity_id = Column(String)
     name = Column(String)
     distance = Column(Float)
     moving_time = Column(Interval)
@@ -73,8 +86,14 @@ class Activity(Base):
 def update_or_create_activity(session, run_activity):
     created = False
     try:
+        source = str(getattr(run_activity, "source", "strava"))
+        source_activity_id = str(
+            getattr(run_activity, "source_activity_id", run_activity.id)
+        )
         activity = (
-            session.query(Activity).filter_by(run_id=int(run_activity.id)).first()
+            session.query(Activity)
+            .filter_by(source=source, source_activity_id=source_activity_id)
+            .first()
         )
         if not activity:
             start_point = run_activity.start_latlng
@@ -101,6 +120,8 @@ def update_or_create_activity(session, run_activity):
 
             activity = Activity(
                 run_id=run_activity.id,
+                source=source,
+                source_activity_id=source_activity_id,
                 name=run_activity.name,
                 distance=run_activity.distance,
                 moving_time=run_activity.moving_time,
@@ -140,5 +161,38 @@ def init_db(db_path):
         f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
     )
     Base.metadata.create_all(engine)
+    _migrate_activity_identity(engine)
     session = sessionmaker(bind=engine)
     return session()
+
+
+def _migrate_activity_identity(engine):
+    columns = {column["name"] for column in inspect(engine).get_columns("activities")}
+
+    with engine.begin() as connection:
+        if "source" not in columns:
+            connection.execute(text("ALTER TABLE activities ADD COLUMN source TEXT"))
+        if "source_activity_id" not in columns:
+            connection.execute(
+                text("ALTER TABLE activities ADD COLUMN source_activity_id TEXT")
+            )
+
+        connection.execute(
+            text(
+                "UPDATE activities SET source = 'strava' "
+                "WHERE source IS NULL OR source = ''"
+            )
+        )
+        connection.execute(
+            text(
+                "UPDATE activities SET source_activity_id = CAST(run_id AS TEXT) "
+                "WHERE source_activity_id IS NULL OR source_activity_id = ''"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "uq_activities_source_identity "
+                "ON activities(source, source_activity_id)"
+            )
+        )
