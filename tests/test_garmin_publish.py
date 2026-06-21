@@ -164,3 +164,35 @@ def test_write_json_is_atomic_and_stable(tmp_path):
 
     assert json.loads(path.read_text()) == {"version": 1, "candidates": []}
     assert not path.with_suffix(".json.tmp").exists()
+
+
+def test_public_activity_list_excludes_near_zero_distance_rows():
+    class Query:
+        def __init__(self):
+            self.filtered = False
+
+        def filter(self, _condition):
+            self.filtered = True
+            return self
+
+        def order_by(self, _column):
+            return []
+
+    class Session:
+        def __init__(self):
+            self.result = Query()
+
+        def query(self, _activity):
+            return self.result
+
+    class Field:
+        def __gt__(self, _value):
+            return True
+
+    class Activity:
+        distance = Field()
+        start_date_local = Field()
+
+    session = Session()
+    assert garmin_publish.activity_dicts(session, Activity) == []
+    assert session.result.filtered is True

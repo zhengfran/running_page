@@ -269,7 +269,11 @@ def normalized_activity(candidate, fit_path, Activity, filter_out):
 
 
 def activity_dicts(session, Activity):
-    activities = session.query(Activity).order_by(Activity.start_date_local)
+    activities = (
+        session.query(Activity)
+        .filter(Activity.distance > 0.1)
+        .order_by(Activity.start_date_local)
+    )
     output = []
     streak = 0
     last_date = None
