@@ -19,10 +19,6 @@ const data: ISiteMetadataResult = {
       name: 'Blog',
       url: 'https://sunroof.zhengzhicheng.com',
     },
-    {
-      name: 'About',
-      url: 'https://github.com/zhengfran',
-    },
   ],
 };
 
