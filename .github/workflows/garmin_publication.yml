@@ -1,6 +1,8 @@
 name: Garmin Publication
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       publish:
@@ -111,7 +113,7 @@ jobs:
         run: PATH_PREFIX=/${{ github.event.repository.name }} pnpm build
 
       - name: Upload candidate public artifacts
-        if: ${{ inputs.publish == false }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == false }}
         uses: actions/upload-artifact@v4
         with:
           name: garmin-publication-candidate
@@ -122,7 +124,7 @@ jobs:
             assets/*.svg
 
       - name: Commit validated public data
-        if: ${{ inputs.publish }}
+        if: ${{ github.event_name == 'schedule' || inputs.publish }}
         run: |
           git config user.name "running_page"
           git config user.email "zhicheng.ink98@gmail.com"
@@ -133,7 +135,7 @@ jobs:
           fi
 
   deploy_pages:
-    if: ${{ inputs.publish }}
+    if: ${{ github.event_name == 'schedule' || inputs.publish }}
     needs: archive_validate_publish
     uses: ./.github/workflows/gh-pages.yml
     with:
