@@ -25,5 +25,5 @@ tzlocal
 fit-tool
 garmin-fit-sdk
 haversine==2.8.0
-garth
+garth==0.4.47
 pycryptodome
