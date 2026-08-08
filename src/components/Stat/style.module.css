@@ -1,0 +1,54 @@
+.stat {
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.stat:hover {
+  transform: translateX(0.125rem);
+}
+
+.value,
+.description {
+  transition: color 160ms ease;
+}
+
+.value {
+  color: var(--rp-yellow-bright);
+}
+
+.description {
+  color: var(--rp-fg-muted);
+}
+
+.toneYear {
+  color: var(--rp-yellow-bright);
+}
+
+.toneRuns {
+  color: var(--rp-aqua-bright);
+}
+
+.toneDistance {
+  color: var(--rp-orange-bright);
+}
+
+.tonePace {
+  color: var(--rp-blue-bright);
+}
+
+.toneStreak {
+  color: var(--rp-green-bright);
+}
+
+.toneHeart {
+  color: var(--rp-red-bright);
+}
+
+.tonePlace {
+  color: var(--rp-purple-bright);
+}
+
+.tonePeriod {
+  color: var(--rp-yellow);
+}

@@ -57,7 +57,7 @@
 
 .selected {
   background-color: color-mix(in srgb, var(--rp-aqua) 14%, transparent);
-  color: var(--rp-yellow);
+  box-shadow: inset 3px 0 0 var(--rp-yellow-bright);
 }
 
 .tableContainer {
@@ -65,17 +65,57 @@
   overflow-x: auto;
 }
 
+.runName {
+  color: var(--rp-yellow-bright);
+}
+
+.runDistance {
+  color: var(--rp-orange-bright);
+}
+
+.runPace {
+  color: var(--rp-blue-bright);
+}
+
+.runHeartRate {
+  color: var(--rp-red-bright);
+}
+
+.runDuration {
+  color: var(--rp-green-bright);
+}
+
 .runDate {
-  color: var(--rp-fg-muted);
+  color: var(--rp-purple-bright);
 }
 
 .runType {
   border: 1px solid var(--rp-border);
   border-radius: 999px;
-  color: var(--rp-fg-muted);
+  color: var(--rp-aqua-bright);
   display: inline-block;
   font-size: 0.75rem;
   line-height: 1;
   padding: 0.25rem 0.5rem;
   white-space: nowrap;
+}
+
+.runType[data-run-type='easy'] {
+  color: var(--rp-aqua-bright);
+}
+
+.runType[data-run-type='interval'] {
+  color: var(--rp-orange-bright);
+}
+
+.runType[data-run-type='threshold'] {
+  color: var(--rp-blue-bright);
+}
+
+.runType[data-run-type='long run'] {
+  color: var(--rp-green-bright);
+}
+
+.runType[data-run-type='race'] {
+  color: var(--rp-red-bright);
 }

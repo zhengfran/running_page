@@ -10,11 +10,19 @@
   --rp-fg-muted: #a89984;
   --rp-border: #504945;
   --rp-yellow: #d79921;
+  --rp-yellow-bright: #fabd2f;
   --rp-orange: #d65d0e;
+  --rp-orange-bright: #fe8019;
   --rp-red: #cc241d;
+  --rp-red-bright: #fb4934;
   --rp-green: #98971a;
+  --rp-green-bright: #b8bb26;
   --rp-aqua: #689d6a;
+  --rp-aqua-bright: #8ec07c;
   --rp-blue: #458588;
+  --rp-blue-bright: #83a598;
+  --rp-purple: #b16286;
+  --rp-purple-bright: #d3869b;
 }
 
 img::selection {
