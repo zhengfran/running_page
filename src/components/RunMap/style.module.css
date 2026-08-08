@@ -22,7 +22,7 @@
   margin-top: 0.1rem;
   font-size: 1rem;
   text-align: center;
-  color: var(--rp-blue-bright);
+  color: var(--rp-fg-muted);
 }
 
 .selected {
@@ -35,7 +35,6 @@
   position: absolute;
   bottom: 0px;
   left: 120px;
-  color: var(--rp-yellow-bright);
   cursor: pointer;
 }
 

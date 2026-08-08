@@ -59,18 +59,18 @@ const RunRow = ({
       role="button"
       tabIndex={0}
     >
-      <td className={styles.runName}>{runTitle}</td>
+      <td>{runTitle}</td>
       <td>
         <span className={styles.runType} data-run-type={runType}>
           {runType}
         </span>
       </td>
       <td className={styles.runDistance}>{distance}</td>
-      <td className={styles.runPace}>{paceParts || '—'}</td>
+      <td>{paceParts || '—'}</td>
       <td className={styles.runHeartRate}>
         {heartRate && heartRate.toFixed(0)}
       </td>
-      <td className={styles.runDuration}>{runTime}</td>
+      <td>{runTime}</td>
       <td className={styles.runDate}>{run.start_date_local}</td>
     </tr>
   );

@@ -65,28 +65,16 @@
   overflow-x: auto;
 }
 
-.runName {
-  color: var(--rp-yellow-bright);
-}
-
 .runDistance {
   color: var(--rp-orange-bright);
-}
-
-.runPace {
-  color: var(--rp-blue-bright);
 }
 
 .runHeartRate {
   color: var(--rp-red-bright);
 }
 
-.runDuration {
-  color: var(--rp-green-bright);
-}
-
 .runDate {
-  color: var(--rp-purple-bright);
+  color: var(--rp-fg-muted);
 }
 
 .runType {

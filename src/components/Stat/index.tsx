@@ -1,15 +1,7 @@
 import { intComma } from '@/utils/utils';
 import styles from './style.module.css';
 
-type StatTone =
-  | 'year'
-  | 'runs'
-  | 'distance'
-  | 'pace'
-  | 'streak'
-  | 'heart'
-  | 'place'
-  | 'period';
+type StatTone = 'distance' | 'heart';
 
 interface IStatProperties {
   value: string | number;
@@ -29,25 +21,14 @@ const textSizeClass = {
 };
 
 const toneClass = {
-  year: styles.toneYear,
-  runs: styles.toneRuns,
   distance: styles.toneDistance,
-  pace: styles.tonePace,
-  streak: styles.toneStreak,
   heart: styles.toneHeart,
-  place: styles.tonePlace,
-  period: styles.tonePeriod,
 };
 
-const toneForDescription = (description: string): StatTone => {
+const toneForDescription = (description: string): StatTone | undefined => {
   if (/heart/i.test(description)) return 'heart';
-  if (/pace/i.test(description)) return 'pace';
-  if (/streak/i.test(description)) return 'streak';
   if (/\bKM\b/i.test(description)) return 'distance';
-  if (/runs/i.test(description)) return 'runs';
-  if (/country|province|city|国家|省份|城市/i.test(description)) return 'place';
-  if (/year|journey|年里/i.test(description)) return 'year';
-  return 'period';
+  return undefined;
 };
 
 const Stat = ({
@@ -64,15 +45,17 @@ const Stat = ({
   return (
     <div className={`${styles.stat} ${className}`} onClick={onClick}>
       <span
-        className={`${styles.value} ${toneClass[valueTone || inferredTone]} ${
-          textSizeClass[citySize || 5]
-        } font-bold italic`}
+        className={`${styles.value} ${
+          valueTone || inferredTone ? toneClass[valueTone || inferredTone] : ''
+        } ${textSizeClass[citySize || 5]} font-bold italic`}
       >
         {intComma(value.toString())}
       </span>
       <span
         className={`${styles.description} ${
-          toneClass[descriptionTone || inferredTone]
+          descriptionTone || inferredTone
+            ? toneClass[descriptionTone || inferredTone]
+            : ''
         } text-lg font-semibold italic`}
       >
         {description}

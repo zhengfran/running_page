@@ -14,41 +14,17 @@
 }
 
 .value {
-  color: var(--rp-yellow-bright);
+  color: var(--rp-fg);
 }
 
 .description {
   color: var(--rp-fg-muted);
 }
 
-.toneYear {
-  color: var(--rp-yellow-bright);
-}
-
-.toneRuns {
-  color: var(--rp-aqua-bright);
-}
-
 .toneDistance {
   color: var(--rp-orange-bright);
 }
 
-.tonePace {
-  color: var(--rp-blue-bright);
-}
-
-.toneStreak {
-  color: var(--rp-green-bright);
-}
-
 .toneHeart {
   color: var(--rp-red-bright);
-}
-
-.tonePlace {
-  color: var(--rp-purple-bright);
-}
-
-.tonePeriod {
-  color: var(--rp-yellow);
 }
