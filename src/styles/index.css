@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --rp-bg: #282828;
+  --rp-bg-soft: #32302f;
+  --rp-bg-hover: #3c3836;
+  --rp-fg: #ebdbb2;
+  --rp-fg-muted: #a89984;
+  --rp-border: #504945;
+  --rp-yellow: #d79921;
+  --rp-orange: #d65d0e;
+  --rp-red: #cc241d;
+  --rp-green: #98971a;
+  --rp-aqua: #689d6a;
+  --rp-blue: #458588;
+}
+
 img::selection {
   background: transparent;
 }
@@ -16,6 +31,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+a {
+  color: var(--rp-fg);
+  text-decoration-color: color-mix(in srgb, var(--rp-yellow) 55%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition:
+    color 160ms ease,
+    text-decoration-color 160ms ease;
+}
+
+a:hover {
+  color: var(--rp-yellow);
+  text-decoration-color: var(--rp-yellow);
+}
+
 iframe {
   border: none;
 }
@@ -23,6 +53,6 @@ iframe {
 hr {
   border-top: none;
   border-bottom: 1px solid;
-  border-color: #0003;
+  border-color: var(--rp-border);
   margin: 2rem 0;
 }

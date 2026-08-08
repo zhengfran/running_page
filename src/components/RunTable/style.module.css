@@ -13,7 +13,7 @@
   margin: 2rem 0 5rem 0;
 
   :is(thead) {
-    color: rgb(204, 204, 204);
+    color: var(--rp-fg-muted);
     text-align: right;
 
     :is(th) {
@@ -34,7 +34,7 @@
 
 .sortButton:focus-visible,
 .runRow:focus-visible {
-  outline: 2px solid red;
+  outline: 2px solid var(--rp-yellow);
   outline-offset: 2px;
 }
 
@@ -51,12 +51,13 @@
   }
 
   &:hover {
-    background-color: lighten(rgb(26, 26, 26), 3%);
+    background-color: var(--rp-bg-hover);
   }
 }
 
 .selected {
-  color: red;
+  background-color: color-mix(in srgb, var(--rp-aqua) 14%, transparent);
+  color: var(--rp-yellow);
 }
 
 .tableContainer {
@@ -65,13 +66,13 @@
 }
 
 .runDate {
-  color: rgb(204, 204, 204);
+  color: var(--rp-fg-muted);
 }
 
 .runType {
-  border: 1px solid rgba(204, 204, 204, 0.35);
+  border: 1px solid var(--rp-border);
   border-radius: 999px;
-  color: rgb(204, 204, 204);
+  color: var(--rp-fg-muted);
   display: inline-block;
   font-size: 0.75rem;
   line-height: 1;

@@ -54,7 +54,7 @@ const CARTO_DARK_STYLE: Style = {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#0b0f14',
+        'background-color': '#282828',
       },
     },
     {

@@ -1,4 +1,9 @@
 .body {
-  background-color: rgb(26, 26, 26);
-  color: rgb(224, 237, 94);
+  background: radial-gradient(
+      circle at top left,
+      rgba(215, 153, 33, 0.08),
+      transparent 28rem
+    ),
+    linear-gradient(180deg, var(--rp-bg-soft), var(--rp-bg) 18rem);
+  color: var(--rp-fg);
 }

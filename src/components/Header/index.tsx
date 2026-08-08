@@ -5,11 +5,15 @@ const Header = () => {
 
   return (
     <>
-      <nav className="mt-12 flex w-full items-center justify-between pl-6 lg:px-16">
+      <nav className="mt-12 flex w-full items-center justify-between pl-6 text-[var(--rp-fg-muted)] lg:px-16">
         <div className="w-1/4">
           <a href="/" aria-label={`${siteTitle} home`}>
             <picture>
-              <img className="h-16 w-16 rounded-full" alt="" src={logo} />
+              <img
+                className="h-16 w-16 rounded-full border border-[var(--rp-border)]"
+                alt=""
+                src={logo}
+              />
             </picture>
           </a>
         </div>
