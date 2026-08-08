@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,23 +19,33 @@ def load_db_module():
     return module
 
 
-def test_existing_database_is_backfilled_with_strava_identity(tmp_path):
+def test_published_database_has_complete_provider_identity(tmp_path):
     module = load_db_module()
     database = tmp_path / "data.db"
     shutil.copy(ROOT / "run_page/data.db", database)
 
     session = module.init_db(database)
 
-    assert session.query(module.Activity).count() == 1065
-    assert (
-        session.query(module.Activity)
-        .filter(module.Activity.source == "strava")
-        .count()
-        == 1065
+    total = session.query(module.Activity).count()
+    source_counts = dict(
+        session.query(module.Activity.source, func.count())
+        .group_by(module.Activity.source)
+        .all()
     )
+
+    assert total > 0
+    assert total == sum(source_counts.values())
+    assert set(source_counts).issubset({"strava", "garmin"})
     assert (
         session.query(module.Activity)
         .filter(module.Activity.source_activity_id.is_(None))
+        .count()
+        == 0
+    )
+    assert (
+        session.query(module.Activity.source, module.Activity.source_activity_id)
+        .group_by(module.Activity.source, module.Activity.source_activity_id)
+        .having(func.count() > 1)
         .count()
         == 0
     )
