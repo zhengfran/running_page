@@ -2,65 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --rp-bg: #282828;
-  --rp-bg-soft: #32302f;
-  --rp-bg-hover: #3c3836;
-  --rp-fg: #ebdbb2;
-  --rp-fg-muted: #a89984;
-  --rp-border: #504945;
-  --rp-yellow: #d79921;
-  --rp-yellow-bright: #fabd2f;
-  --rp-orange: #d65d0e;
-  --rp-orange-bright: #fe8019;
-  --rp-red: #cc241d;
-  --rp-red-bright: #fb4934;
-  --rp-green: #98971a;
-  --rp-green-bright: #b8bb26;
-  --rp-aqua: #689d6a;
-  --rp-aqua-bright: #8ec07c;
-  --rp-blue: #458588;
-  --rp-blue-bright: #83a598;
-  --rp-purple: #b16286;
-  --rp-purple-bright: #d3869b;
+:root,
+[data-theme='light'] {
+  --rp-bg: #fafaf7;
+  --rp-bg-soft: #f2f3ee;
+  --rp-bg-hover: #eff1eb;
+  --rp-fg: #20211f;
+  --rp-fg-muted: #6d706b;
+  --rp-border: #d9dbd5;
+  --rp-accent: #2e5848;
+  --rp-yellow: #2e5848;
+  --rp-yellow-bright: #2e5848;
+  --rp-orange: #6d706b;
+  --rp-orange-bright: #446f5d;
+  --rp-red: #9b3e35;
+  --rp-red-bright: #9b3e35;
+  --rp-green: #2e5848;
+  --rp-green-bright: #2e5848;
+  --rp-aqua: #2e5848;
+  --rp-aqua-bright: #2e5848;
+  --rp-blue: #516b78;
+  --rp-blue-bright: #516b78;
+  --rp-purple: #6f6270;
+  --rp-purple-bright: #6f6270;
 }
 
-img::selection {
-  background: transparent;
+[data-theme='dark'] {
+  --rp-bg: #171816;
+  --rp-bg-soft: #20221f;
+  --rp-bg-hover: #252824;
+  --rp-fg: #eeefe9;
+  --rp-fg-muted: #9a9d96;
+  --rp-border: #353732;
+  --rp-accent: #8ab5a1;
+  --rp-yellow: #8ab5a1;
+  --rp-yellow-bright: #8ab5a1;
+  --rp-orange: #a7b9ae;
+  --rp-orange-bright: #a7b9ae;
+  --rp-red: #d58176;
+  --rp-red-bright: #d58176;
+  --rp-green: #8ab5a1;
+  --rp-green-bright: #8ab5a1;
+  --rp-aqua: #8ab5a1;
+  --rp-aqua-bright: #8ab5a1;
+  --rp-blue: #91aab4;
+  --rp-blue-bright: #91aab4;
+  --rp-purple: #b1a1b2;
+  --rp-purple-bright: #b1a1b2;
 }
 
-img::-moz-selection {
-  background: transparent;
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--rp-bg);
+  scroll-behavior: smooth;
 }
 
 body {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
   text-rendering: optimizeLegibility;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--rp-accent) 20%, transparent);
+}
+
+img::selection,
+img::-moz-selection {
+  background: transparent;
+}
+
 a {
   color: var(--rp-fg);
-  text-decoration-color: color-mix(in srgb, var(--rp-yellow) 55%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--rp-accent) 45%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  transition:
-    color 160ms ease,
-    text-decoration-color 160ms ease;
+  transition: color 140ms ease, text-decoration-color 140ms ease;
 }
 
 a:hover {
-  color: var(--rp-yellow);
-  text-decoration-color: var(--rp-yellow);
+  color: var(--rp-accent);
+  text-decoration-color: var(--rp-accent);
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 3px;
 }
 
 iframe {
-  border: none;
+  border: 0;
 }
 
 hr {
-  border-top: none;
-  border-bottom: 1px solid;
-  border-color: var(--rp-border);
+  border: 0;
+  border-top: 1px solid var(--rp-border);
   margin: 2rem 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

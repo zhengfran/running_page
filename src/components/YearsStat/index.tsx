@@ -1,6 +1,7 @@
 import YearStat from '@/components/YearStat';
 import useActivities from '@/hooks/useActivities';
 import { INFO_MESSAGE } from '@/utils/const';
+import styles from './style.module.css';
 
 const YearsStat = ({
   year,
@@ -19,17 +20,24 @@ const YearsStat = ({
 
   // for short solution need to refactor
   return (
-    <div className="w-full pb-16 pr-16 lg:w-full lg:pr-16">
-      <section className="pb-0">
+    <div className={styles.wrapper}>
+      <section className={styles.intro}>
         <p className="leading-relaxed">
           {INFO_MESSAGE(years.length, year)}
           <br />
         </p>
       </section>
       <hr />
-      {yearsArrayUpdate.map((year) => (
-        <YearStat key={year} year={year} onClick={onClick} />
-      ))}
+      <div className={styles.years}>
+        {yearsArrayUpdate.map((itemYear) => (
+          <YearStat
+            key={itemYear}
+            year={itemYear}
+            onClick={onClick}
+            selected={itemYear === year}
+          />
+        ))}
+      </div>
     </div>
   );
 };

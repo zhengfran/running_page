@@ -8,6 +8,7 @@ import SVGStat from '@/components/SVGStat';
 import YearsStat from '@/components/YearsStat';
 import useActivities from '@/hooks/useActivities';
 import useSiteMetadata from '@/hooks/useSiteMetadata';
+import styles from './style.module.css';
 import { IS_CHINESE } from '@/utils/const';
 import {
   Activity,
@@ -182,10 +183,19 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="w-full lg:w-1/3">
-        <h1 className="my-12 text-5xl font-extrabold italic tracking-tight text-[var(--rp-yellow)]">
-          <a href="/">{siteTitle}</a>
-        </h1>
+      <header className={styles.intro}>
+        <p>RUNNING ARCHIVE · 2019—2026</p>
+        <h1>{siteTitle}</h1>
+        <div className={styles.introCopy}>
+          <p>
+            A personal archive of routes, ordinary miles, and the patterns that
+            become visible over time.
+          </p>
+          <span>Choose a year or a row to redraw the map.</span>
+        </div>
+      </header>
+      <div className={styles.explorerGrid}>
+        <aside className={styles.statsPanel} aria-label="Running filters and totals">
         {(viewState.zoom ?? 0) <= 3 && IS_CHINESE ? (
           <LocationStat
             changeYear={changeYear}
@@ -195,28 +205,35 @@ const Index = () => {
         ) : (
           <YearsStat year={year} onClick={changeYear} />
         )}
-      </div>
-      <div className="w-full lg:w-2/3">
-        <RunMap
-          title={title}
-          viewState={viewState}
-          geoData={geoData}
-          setViewState={setViewState}
-          changeYear={changeYear}
-          thisYear={year}
-        />
-        {year === 'Total' ? (
-          <SVGStat />
-        ) : (
-          <RunTable
-            runs={runs}
-            locateActivity={locateActivity}
-            setActivity={setActivity}
-            runIndex={runIndex}
-            setRunIndex={setRunIndex}
+        </aside>
+        <section className={styles.mapPanel} aria-label="Interactive running map and activity list">
+          <RunMap
+            title={title}
+            viewState={viewState}
+            geoData={geoData}
+            setViewState={setViewState}
+            changeYear={changeYear}
+            thisYear={year}
           />
-        )}
+          {year === 'Total' ? (
+            <SVGStat />
+          ) : (
+            <RunTable
+              runs={runs}
+              locateActivity={locateActivity}
+              setActivity={setActivity}
+              runIndex={runIndex}
+              setRunIndex={setRunIndex}
+            />
+          )}
+        </section>
       </div>
+      <footer className={styles.footer}>
+        <span>© 2026 Zheng Zhicheng</span>
+        <a href="https://www.zhengzhicheng.com/">Main site</a>
+        <a href="https://github.com/zhengfran">GitHub</a>
+        <a href="#running-explorer">Top ↑</a>
+      </footer>
       {/* Enable Audiences in Vercel Analytics: https://vercel.com/docs/concepts/analytics/audiences/quickstart */}
       <Analytics />
     </Layout>

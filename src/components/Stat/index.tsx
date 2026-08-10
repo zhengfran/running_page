@@ -14,10 +14,10 @@ interface IStatProperties {
 }
 
 const textSizeClass = {
-  3: 'text-3xl',
-  4: 'text-4xl',
-  5: 'text-5xl',
-  6: 'text-6xl',
+  3: 'text-lg',
+  4: 'text-xl',
+  5: 'text-3xl',
+  6: 'text-4xl',
 };
 
 const toneClass = {
@@ -41,22 +41,18 @@ const Stat = ({
   descriptionTone,
 }: IStatProperties) => {
   const inferredTone = toneForDescription(description);
+  const resolvedValueTone = valueTone || inferredTone;
+  const resolvedDescriptionTone = descriptionTone || inferredTone;
 
   return (
     <div className={`${styles.stat} ${className}`} onClick={onClick}>
       <span
-        className={`${styles.value} ${
-          valueTone || inferredTone ? toneClass[valueTone || inferredTone] : ''
-        } ${textSizeClass[citySize || 5]} font-bold italic`}
+        className={`${styles.value} ${resolvedValueTone ? toneClass[resolvedValueTone] : ''} ${textSizeClass[citySize || 5]} font-medium`}
       >
         {intComma(value.toString())}
       </span>
       <span
-        className={`${styles.description} ${
-          descriptionTone || inferredTone
-            ? toneClass[descriptionTone || inferredTone]
-            : ''
-        } text-lg font-semibold italic`}
+        className={`${styles.description} ${resolvedDescriptionTone ? toneClass[resolvedDescriptionTone] : ''} text-sm font-normal`}
       >
         {description}
       </span>

@@ -1,0 +1,38 @@
+.wrapper {
+  padding-bottom: 3rem;
+  width: 100%;
+}
+
+.intro {
+  color: var(--rp-fg-muted);
+  font-size: 13px;
+}
+
+@media (min-width: 901px) {
+  .wrapper {
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .years {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .years > div {
+    border-right: 1px solid var(--rp-border);
+    flex: 0 0 205px;
+    margin-right: 22px;
+    padding-right: 22px;
+    scroll-snap-align: start;
+  }
+
+  .years > div > hr {
+    display: none;
+  }
+}

@@ -1,9 +1,46 @@
 .body {
-  background: radial-gradient(
-      circle at top left,
-      rgba(215, 153, 33, 0.08),
-      transparent 28rem
-    ),
-    linear-gradient(180deg, var(--rp-bg-soft), var(--rp-bg) 18rem);
+  background: var(--rp-bg);
   color: var(--rp-fg);
+  min-height: 100vh;
+}
+
+.main {
+  margin-left: 270px;
+  min-height: 100vh;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 1500px;
+  padding: 70px 64px 100px;
+}
+
+.skipLink {
+  background: var(--rp-accent);
+  color: var(--rp-bg);
+  left: 12px;
+  padding: 8px 12px;
+  position: fixed;
+  top: -80px;
+  z-index: 100;
+}
+
+.skipLink:focus {
+  top: 12px;
+}
+
+@media (max-width: 1020px) {
+  .page {
+    padding-inline: 36px;
+  }
+}
+
+@media (max-width: 760px) {
+  .main {
+    margin-left: 0;
+  }
+
+  .page {
+    padding: 44px 20px 72px;
+  }
 }

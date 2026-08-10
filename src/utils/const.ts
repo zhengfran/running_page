@@ -34,8 +34,6 @@ const GOOGLE_ANALYTICS_TRACKING_ID = '';
 const USE_DASH_LINE = true;
 // styling: route line opacity: [0, 1]
 const LINE_OPACITY = 0.4;
-// styling: map height
-const MAP_HEIGHT = 600;
 //set to `false` if you want to hide the road label characters
 const ROAD_LABEL_DISPLAY = true;
 //set to `true` if you want to display only the routes without showing the map.
@@ -92,7 +90,6 @@ export {
   USE_ANIMATION_FOR_GRID,
   USE_DASH_LINE,
   LINE_OPACITY,
-  MAP_HEIGHT,
   PRIVACY_MODE,
   LIGHTS_ON,
 };

@@ -10,26 +10,22 @@ const Layout = ({ children }: React.PropsWithChildren) => {
 
   return (
     <>
-      <Helmet bodyAttributes={{ class: styles.body }}>
-        <html lang="en" />
+      <Helmet htmlAttributes={{ lang: 'en' }} bodyAttributes={{ class: styles.body }}>
         <title>{siteTitle}</title>
         <meta name="description" content={description} />
-        <meta name="keywords" content="running" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
-        />
+        <meta name="keywords" content="running, running archive, running map" />
       </Helmet>
+      <a className={styles.skipLink} href="#running-explorer">
+        Skip to running explorer
+      </a>
       <Header />
-      <div className="mb-16 p-4 lg:flex lg:p-16">
-        {children}
-      </div>
+      <main className={styles.main} id="running-explorer">
+        <div className={styles.page}>{children}</div>
+      </main>
     </>
   );
 };
 
-Layout.propTypes = {
-  children: PropTypes.node.isRequired,
-};
+Layout.propTypes = { children: PropTypes.node.isRequired };
 
 export default Layout;

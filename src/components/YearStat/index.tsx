@@ -9,9 +9,11 @@ import { loadSvgComponent } from '@/utils/svgUtils';
 const YearStat = ({
   year,
   onClick,
+  selected = false,
 }: {
   year: string;
   onClick: (_year: string) => void;
+  selected?: boolean;
 }) => {
   let { activities: runs, years } = useActivities();
   // for hover
@@ -58,6 +60,16 @@ const YearStat = ({
     <div
       className="cursor-pointer"
       onClick={() => onClick(year)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick(year);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Show ${year} running data`}
+      aria-pressed={selected}
       {...eventHandlers}
     >
       <section>

@@ -31,11 +31,16 @@
 
 .runTitle {
   height: 29px;
-  width: 710px;
+  max-width: calc(100% - 150px);
   position: absolute;
   bottom: 0px;
   left: 120px;
   cursor: pointer;
+  color: #f4f5ef;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lights {
@@ -45,6 +50,18 @@
   opacity: 0.3;
   width: 29px;
   height: 38px;
+}
+
+@media (max-width: 620px) {
+  .button {
+    font-size: 0.8rem;
+    padding-inline: 0.3rem;
+  }
+
+  .runTitle {
+    left: 80px;
+    max-width: calc(100% - 110px);
+  }
 }
 
 .lightsOn {

@@ -1,11 +1,9 @@
 .stat {
-  transition:
-    color 160ms ease,
-    transform 160ms ease;
-}
-
-.stat:hover {
-  transform: translateX(0.125rem);
+  align-items: baseline;
+  column-gap: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  transition: color 140ms ease;
 }
 
 .value,
@@ -15,6 +13,8 @@
 
 .value {
   color: var(--rp-fg);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
 }
 
 .description {

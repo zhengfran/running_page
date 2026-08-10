@@ -1,5 +1,5 @@
 import MapboxLanguage from '@mapbox/mapbox-gl-language';
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import Map, {
   Layer,
   Source,
@@ -18,7 +18,6 @@ import {
   COUNTRY_FILL_COLOR,
   USE_DASH_LINE,
   LINE_OPACITY,
-  MAP_HEIGHT,
   PRIVACY_MODE,
   LIGHTS_ON,
   MAIN_COLOR,
@@ -33,38 +32,34 @@ import { RPGeometry } from '@/static/run_countries';
 import './mapbox.css';
 import LightsControl from '@/components/RunMap/LightsControl';
 
-const CARTO_DARK_STYLE: Style = {
-  version: 8,
-  sources: {
-    'carto-dark': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-  layers: [
-    {
-      id: 'background',
-      type: 'background',
-      paint: {
-        'background-color': '#282828',
+const cartoStyle = (theme: 'light' | 'dark'): Style => {
+  const source = `carto-${theme}`;
+  const tileTheme = theme === 'dark' ? 'dark_all' : 'light_all';
+  return {
+    version: 8,
+    sources: {
+      [source]: {
+        type: 'raster',
+        tiles: [
+          `https://a.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}.png`,
+          `https://b.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}.png`,
+          `https://c.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}.png`,
+          `https://d.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}.png`,
+        ],
+        tileSize: 256,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       },
     },
-    {
-      id: 'carto-dark',
-      type: 'raster',
-      source: 'carto-dark',
-      minzoom: 0,
-      maxzoom: 20,
-    },
-  ],
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: { 'background-color': theme === 'dark' ? '#171816' : '#f2f3ee' },
+      },
+      { id: source, type: 'raster', source, minzoom: 0, maxzoom: 20 },
+    ],
+  };
 };
 
 interface IRunMapProps {
@@ -87,6 +82,21 @@ const RunMap = ({
   const { countries, provinces } = useActivities();
   const mapRef = useRef<MapRef>();
   const [lights, setLights] = useState(PRIVACY_MODE ? false : LIGHTS_ON);
+  const [siteTheme, setSiteTheme] = useState<'light' | 'dark'>(
+    document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setSiteTheme(
+        document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+      );
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
   const keepWhenLightsOff = ['runs2'];
   function switchLayerVisibility(map: MapInstance, lights: boolean) {
     const styleJson = map.getStyle();
@@ -164,7 +174,7 @@ const RunMap = ({
   );
   const style: React.CSSProperties = {
     width: '100%',
-    height: MAP_HEIGHT,
+    height: 'min(600px, 72vh)',
   };
   const fullscreenButton: React.CSSProperties = {
     position: 'absolute',
@@ -173,8 +183,8 @@ const RunMap = ({
     opacity: 0.3,
   };
   const mapStyle = MAPBOX_TOKEN
-    ? 'mapbox://styles/mapbox/dark-v10'
-    : CARTO_DARK_STYLE;
+    ? `mapbox://styles/mapbox/${siteTheme === 'dark' ? 'dark-v10' : 'light-v10'}`
+    : cartoStyle(siteTheme);
 
   return (
     <Map
