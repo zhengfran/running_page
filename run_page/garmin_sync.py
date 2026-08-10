@@ -44,6 +44,39 @@ GARMIN_CN_URL_DICT = {
 }
 
 
+def refresh_garmin_oauth2(
+    refresh,
+    max_attempts=None,
+    retry_delay_seconds=None,
+    sleep_func=time.sleep,
+):
+    max_attempts = max_attempts or int(os.getenv("GARMIN_AUTH_RETRIES", "3"))
+    retry_delay_seconds = retry_delay_seconds or float(
+        os.getenv("GARMIN_AUTH_RETRY_DELAY_SECONDS", "10")
+    )
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            refresh()
+            return
+        except Exception as err:
+            if attempt == max_attempts:
+                raise GarminConnectConnectionError(
+                    "Failed to refresh Garmin OAuth2 token after "
+                    f"{max_attempts} attempts. Garmin SSO may be returning a "
+                    "temporary non-JSON response; if this keeps failing, "
+                    "regenerate GARMIN_SECRET_STRING."
+                ) from err
+
+            logger.warning(
+                "Garmin OAuth2 refresh failed on attempt %s/%s; retrying: %s",
+                attempt,
+                max_attempts,
+                err,
+            )
+            sleep_func(retry_delay_seconds * attempt)
+
+
 class Garmin:
     def __init__(self, secret_string, auth_domain, is_only_running=False):
         """
@@ -61,7 +94,7 @@ class Garmin:
         self.modern_url = self.URL_DICT.get("MODERN_URL")
         garth.client.loads(secret_string)
         if garth.client.oauth2_token.expired:
-            garth.client.refresh_oauth2()
+            refresh_garmin_oauth2(garth.client.refresh_oauth2)
 
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36",
