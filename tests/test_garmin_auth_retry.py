@@ -83,3 +83,27 @@ def test_refresh_garmin_oauth2_reports_secret_regeneration_after_retries():
         )
 
     assert "GARMIN_SECRET_STRING" in str(exc_info.value)
+
+
+def test_garmin_auth_retry_delay_cools_down_rate_limits(monkeypatch):
+    class Response:
+        status_code = 429
+        headers = {}
+
+    class Error(Exception):
+        response = Response()
+
+    monkeypatch.setenv("GARMIN_AUTH_429_RETRY_DELAY_SECONDS", "120")
+
+    assert garmin_sync.garmin_auth_retry_delay(Error(), 10, 1) == 120
+
+
+def test_garmin_auth_retry_delay_respects_retry_after_header():
+    class Response:
+        status_code = 429
+        headers = {"Retry-After": "45"}
+
+    class Error(Exception):
+        response = Response()
+
+    assert garmin_sync.garmin_auth_retry_delay(Error(), 10, 1) == 45

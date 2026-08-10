@@ -68,13 +68,28 @@ def refresh_garmin_oauth2(
                     "regenerate GARMIN_SECRET_STRING."
                 ) from err
 
+            delay = garmin_auth_retry_delay(err, retry_delay_seconds, attempt)
             logger.warning(
                 "Garmin OAuth2 refresh failed on attempt %s/%s; retrying: %s",
                 attempt,
                 max_attempts,
                 err,
             )
-            sleep_func(retry_delay_seconds * attempt)
+            sleep_func(delay)
+
+
+def garmin_auth_retry_delay(err, retry_delay_seconds, attempt):
+    response = getattr(err, "response", None)
+    if getattr(response, "status_code", None) == 429:
+        retry_after = getattr(response, "headers", {}).get("Retry-After")
+        if retry_after:
+            try:
+                return max(float(retry_after), retry_delay_seconds * attempt)
+            except ValueError:
+                pass
+        return float(os.getenv("GARMIN_AUTH_429_RETRY_DELAY_SECONDS", "300"))
+
+    return retry_delay_seconds * attempt
 
 
 class Garmin:
