@@ -8,6 +8,7 @@ import {
   RunType,
 } from '@/utils/utils';
 import styles from './style.module.css';
+import useSiteLanguage from '@/hooks/useSiteLanguage';
 
 interface IRunRowProperties {
   elementIndex: number;
@@ -26,11 +27,21 @@ const RunRow = ({
   runIndex,
   setRunIndex,
 }: IRunRowProperties) => {
+  const language = useSiteLanguage();
   const distance = (run.distance / 1000.0).toFixed(2);
   const paceParts = run.average_speed ? formatPace(run.average_speed) : null;
   const heartRate = run.average_heartrate;
   const runTime = formatRunTime(run.moving_time);
   const runTitle = titleForRun(run);
+  const runTypeLabel = language === 'zh'
+    ? ({
+        easy: '轻松跑',
+        interval: '间歇',
+        threshold: '阈值',
+        'long run': '长距离',
+        race: '比赛',
+      } as Record<string, string>)[runType] || runType
+    : runType;
   const handleClick = () => {
     if (runIndex === elementIndex) {
       setRunIndex(-1);
@@ -52,7 +63,7 @@ const RunRow = ({
     <tr
       className={`${styles.runRow} ${runIndex === elementIndex ? styles.selected : ''}`}
       key={run.start_date_local}
-      aria-label={`Show ${runTitle} on map`}
+      aria-label={language === 'zh' ? `在地图上显示 ${runTitle}` : `Show ${runTitle} on map`}
       aria-pressed={runIndex === elementIndex}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -62,7 +73,7 @@ const RunRow = ({
       <td>{runTitle}</td>
       <td>
         <span className={styles.runType} data-run-type={runType}>
-          {runType}
+          {runTypeLabel}
         </span>
       </td>
       <td className={styles.runDistance}>{distance}</td>

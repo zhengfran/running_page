@@ -7,7 +7,7 @@ interface ISiteMetadataResult {
 const data: ISiteMetadataResult = {
   siteTitle: 'Running explorer',
   siteUrl: 'https://run.zhengzhicheng.com',
-  description: 'Zheng Zhicheng’s running archive, routes and yearly patterns.',
+  description: 'Zheng Zhicheng’s running history, routes and yearly patterns.',
 };
 
 export default data;

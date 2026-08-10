@@ -8,6 +8,7 @@ import SVGStat from '@/components/SVGStat';
 import YearsStat from '@/components/YearsStat';
 import useActivities from '@/hooks/useActivities';
 import useSiteMetadata from '@/hooks/useSiteMetadata';
+import useSiteLanguage from '@/hooks/useSiteLanguage';
 import styles from './style.module.css';
 import { IS_CHINESE } from '@/utils/const';
 import {
@@ -27,7 +28,11 @@ import {
 
 const Index = () => {
   const { siteTitle } = useSiteMetadata();
-  const { activities, thisYear } = useActivities();
+  const language = useSiteLanguage();
+  const t = (english: string, chinese: string) =>
+    language === 'zh' ? chinese : english;
+  const { activities, thisYear, years } = useActivities();
+  const yearRange = `${years.at(-1)}—${years[0]}`;
   const [year, setYear] = useState(thisYear);
   const [runIndex, setRunIndex] = useState(-1);
   const [runs, setActivity] = useState(
@@ -61,7 +66,10 @@ const Index = () => {
     }
     setActivity(filterAndSortRuns(activities, item, func, sortDateFunc));
     setRunIndex(-1);
-    setTitle(`${item} ${name} Running Heatmap`);
+    const category = language === 'zh'
+      ? ({ Year: '年份', City: '城市', Title: '时段' } as Record<string, string>)[name] || name
+      : name;
+    setTitle(language === 'zh' ? `${item} · ${category}跑步轨迹` : `${item} ${category} Running Heatmap`);
   };
 
   const changeYear = (y: string) => {
@@ -116,6 +124,11 @@ const Index = () => {
 
   useEffect(() => {
     const runsNum = runs.length;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      clearAnimation();
+      setGeoData(geoJsonForRuns(runs));
+      return clearAnimation;
+    }
     // maybe change 20 ?
     const sliceNume = runsNum >= 20 ? runsNum / 20 : 1;
     let i = sliceNume;
@@ -184,18 +197,20 @@ const Index = () => {
   return (
     <Layout>
       <header className={styles.intro}>
-        <p>RUNNING ARCHIVE · 2019—2026</p>
-        <h1>{siteTitle}</h1>
+        <p>{t(`RUNNING HISTORY · ${yearRange}`, `跑步记录 · ${yearRange}`)}</p>
+        <h1>{t(siteTitle, '跑步探索器')}</h1>
         <div className={styles.introCopy}>
           <p>
-            A personal archive of routes, ordinary miles, and the patterns that
-            become visible over time.
+            {t(
+              'A personal history of routes, ordinary miles, and the patterns that become visible over time.',
+              '一份关于路线、普通里程，以及那些随时间逐渐显现的规律的个人记录。'
+            )}
           </p>
-          <span>Choose a year or a row to redraw the map.</span>
+          <span>{t('Choose a year or a row to redraw the map.', '选择年份或活动行，重新绘制地图。')}</span>
         </div>
       </header>
       <div className={styles.explorerGrid}>
-        <aside className={styles.statsPanel} aria-label="Running filters and totals">
+        <aside className={styles.statsPanel} aria-label={t('Running filters and totals', '跑步筛选与统计')}>
         {(viewState.zoom ?? 0) <= 3 && IS_CHINESE ? (
           <LocationStat
             changeYear={changeYear}
@@ -206,7 +221,11 @@ const Index = () => {
           <YearsStat year={year} onClick={changeYear} />
         )}
         </aside>
-        <section className={styles.mapPanel} aria-label="Interactive running map and activity list">
+        <section
+          className={styles.mapPanel}
+          id="running-map-panel"
+          aria-label={t('Interactive running map and activity list', '交互式跑步地图与活动列表')}
+        >
           <RunMap
             title={title}
             viewState={viewState}
@@ -230,9 +249,9 @@ const Index = () => {
       </div>
       <footer className={styles.footer}>
         <span>© 2026 Zheng Zhicheng</span>
-        <a href="https://www.zhengzhicheng.com/">Main site</a>
+        <a href="https://www.zhengzhicheng.com/">{t('Main site', '主站')}</a>
         <a href="https://github.com/zhengfran">GitHub</a>
-        <a href="#running-explorer">Top ↑</a>
+        <a href="#running-explorer">{t('Top', '顶部')} ↑</a>
       </footer>
       {/* Enable Audiences in Vercel Analytics: https://vercel.com/docs/concepts/analytics/audiences/quickstart */}
       <Analytics />

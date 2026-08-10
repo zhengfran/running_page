@@ -1,6 +1,6 @@
 import YearStat from '@/components/YearStat';
 import useActivities from '@/hooks/useActivities';
-import { INFO_MESSAGE } from '@/utils/const';
+import useSiteLanguage from '@/hooks/useSiteLanguage';
 import styles from './style.module.css';
 
 const YearsStat = ({
@@ -11,6 +11,7 @@ const YearsStat = ({
   onClick: (_year: string) => void;
 }) => {
   const { years } = useActivities();
+  const language = useSiteLanguage();
   // make sure the year click on front
   const yearsArrayUpdate = [
     year,
@@ -23,7 +24,9 @@ const YearsStat = ({
     <div className={styles.wrapper}>
       <section className={styles.intro}>
         <p className="leading-relaxed">
-          {INFO_MESSAGE(years.length, year)}
+          {language === 'zh'
+            ? `这份跑步记录跨越 ${years.length} 年，当前显示${year === 'Total' ? '全部年份' : ` ${year} 年`}。`
+            : `This running history spans ${years.length} years; the current view shows ${year === 'Total' ? 'all years' : year}.`}
           <br />
         </p>
       </section>

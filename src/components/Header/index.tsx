@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import useSiteLanguage, { setSiteLanguage } from '@/hooks/useSiteLanguage';
 import styles from './style.module.css';
 
 const mainSite = 'https://www.zhengzhicheng.com';
 
 const Header = () => {
+  const language = useSiteLanguage();
+  const t = (english: string, chinese: string) =>
+    language === 'zh' ? chinese : english;
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       return localStorage.getItem('zz-theme') === 'dark' ? 'dark' : 'light';
@@ -29,24 +33,34 @@ const Header = () => {
           Zhicheng
         </a>
         <p>
-          Embedded engineer
+          {t('Embedded engineer', '嵌入式工程师')}
           <br />
-          and runner
+          {t('and runner', '与跑者')}
         </p>
       </div>
-      <nav className={styles.nav} aria-label="Primary navigation">
-        <a href={`${mainSite}/`}>Home</a>
-        <a href={`${mainSite}/projects.html`}>Projects</a>
-        <a href={`${mainSite}/writing.html`}>Writing</a>
+      <nav className={styles.nav} aria-label={t('Primary navigation', '主导航')}>
+        <a href={`${mainSite}/`}>{t('Home', '首页')}</a>
+        <a href={`${mainSite}/projects.html`}>{t('Projects', '项目')}</a>
+        <a href={`${mainSite}/writing.html`}>{t('Writing', '写作')}</a>
         <a href="/" aria-current="page">
-          Running
+          {t('Running', '跑步')}
         </a>
-        <a href={`${mainSite}/about.html`}>About</a>
+        <a href={`${mainSite}/about.html`}>{t('About', '关于')}</a>
       </nav>
       <div className={styles.controls}>
         <button
           type="button"
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          aria-label={language === 'zh' ? 'Switch to English' : '切换到中文'}
+          onClick={() => setSiteLanguage(language === 'zh' ? 'en' : 'zh')}
+        >
+          {language === 'zh' ? 'EN' : '中'}
+        </button>
+        <button
+          type="button"
+          aria-label={t(
+            `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+            `切换到${theme === 'dark' ? '浅色' : '深色'}主题`
+          )}
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
           ◐

@@ -5,6 +5,7 @@ import { formatPace } from '@/utils/utils';
 import useHover from '@/hooks/useHover';
 import { yearStats } from '@assets/index';
 import { loadSvgComponent } from '@/utils/svgUtils';
+import useSiteLanguage from '@/hooks/useSiteLanguage';
 
 const YearStat = ({
   year,
@@ -15,6 +16,9 @@ const YearStat = ({
   onClick: (_year: string) => void;
   selected?: boolean;
 }) => {
+  const language = useSiteLanguage();
+  const t = (english: string, chinese: string) =>
+    language === 'zh' ? chinese : english;
   let { activities: runs, years } = useActivities();
   // for hover
   const [hovered, eventHandlers] = useHover();
@@ -68,18 +72,18 @@ const YearStat = ({
       }}
       role="button"
       tabIndex={0}
-      aria-label={`Show ${year} running data`}
+      aria-label={t(`Show ${year} running data`, `显示 ${year === 'Total' ? '全部' : year} 跑步数据`)}
       aria-pressed={selected}
       {...eventHandlers}
     >
       <section>
-        <Stat value={year} description=" Journey" />
-        <Stat value={runs.length} description=" Runs" />
+        <Stat value={year === 'Total' ? t('Total', '全部') : year} description={t(' Journey', ' 年记录')} />
+        <Stat value={runs.length} description={t(' Runs', ' 次跑步')} />
         <Stat value={sumDistance} description=" KM" />
-        <Stat value={avgPace} description=" Avg Pace" />
-        <Stat value={`${streak} day`} description=" Streak" />
+        <Stat value={avgPace} description={t(' Avg Pace', ' 平均配速')} />
+        <Stat value={`${streak} ${t('day', '天')}`} description={t(' Streak', ' 连续记录')} />
         {hasHeartRate && (
-          <Stat value={avgHeartRate} description=" Avg Heart Rate" />
+          <Stat value={avgHeartRate} description={t(' Avg Heart Rate', ' 平均心率')} />
         )}
       </section>
       {year !== 'Total' && hovered && (

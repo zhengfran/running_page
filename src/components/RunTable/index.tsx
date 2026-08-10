@@ -10,6 +10,7 @@ import {
 } from '@/utils/utils';
 import RunRow from './RunRow';
 import styles from './style.module.css';
+import useSiteLanguage from '@/hooks/useSiteLanguage';
 
 interface IRunTableProperties {
   runs: Activity[];
@@ -28,6 +29,7 @@ const RunTable = ({
   runIndex,
   setRunIndex,
 }: IRunTableProperties) => {
+  const language = useSiteLanguage();
   const [sortFuncInfo, setSortFuncInfo] = useState('');
   // TODO refactor?
   const sortKMFunc: SortFunc = (a, b) =>
@@ -65,6 +67,14 @@ const RunTable = ({
     ['Time', sortRunTimeFunc],
     ['Date', sortDateFuncClick],
   ]);
+  const labels = new Map([
+    ['Type', language === 'zh' ? '类型' : 'Type'],
+    ['KM', 'KM'],
+    ['Pace', language === 'zh' ? '配速' : 'Pace'],
+    ['BPM', language === 'zh' ? '心率' : 'BPM'],
+    ['Time', language === 'zh' ? '时长' : 'Time'],
+    ['Date', language === 'zh' ? '日期' : 'Date'],
+  ]);
 
   const handleClick: React.MouseEventHandler<HTMLElement> = (e) => {
     const funcName = (e.currentTarget as HTMLElement).dataset.sort;
@@ -91,7 +101,7 @@ const RunTable = ({
             {Array.from(sortFuncMap.keys()).map((k) => (
               <th key={k} data-sort={k} onClick={handleClick}>
                 <button className={styles.sortButton} type="button">
-                  {k}
+                  {labels.get(k)}
                 </button>
               </th>
             ))}
