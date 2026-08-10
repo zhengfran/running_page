@@ -817,14 +817,15 @@ For more display effects, see:
 
 ![image](https://user-images.githubusercontent.com/15976103/94452465-2599b880-01e2-11eb-9538-582f0f46c421.png)
 
-2. import repo
+2. Import the repository and keep `master` as the Production Branch. The committed [`vercel.json`](vercel.json) selects Vite, lets Vercel choose pnpm 8 from lockfile version 6, runs `pnpm build`, publishes `dist`, and prevents the generated `gh-pages` branch from creating a duplicate Vercel deployment.
 
 <br>
 
 ![image](https://user-images.githubusercontent.com/15976103/94452556-3f3b0000-01e2-11eb-97a2-3789c2d60766.png)
 
-2. Awaiting completion of deployment
-3. Visits
+3. Add `VITE_MAPBOX_TOKEN` to the Vercel project environments when the Mapbox basemap is required. GitHub repository secrets are not forwarded to Vercel automatically.
+4. Branch pushes create Preview deployments; pushes to `master` create Production deployments through Vercel's Git integration. The scheduled Garmin publication workflow only commits validated public data to `master`; that commit is the deployment trigger.
+5. Await completion of the deployment, then visit the assigned domain.
 
 </details>
 
