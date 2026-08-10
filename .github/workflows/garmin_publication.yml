@@ -128,9 +128,11 @@ jobs:
         run: |
           git config user.name "running_page"
           git config user.email "zhicheng.ink98@gmail.com"
+          git pull --rebase --autostash origin master
           git add run_page/data.db src/static/activities.json assets
           if ! git diff --cached --quiet; then
             git commit -m "publish new Garmin runs"
+            git pull --rebase --autostash origin master
             git push origin master
           fi
 
