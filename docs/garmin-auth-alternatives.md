@@ -2,12 +2,19 @@
 
 Date: 2026-08-10
 
+Status: Implemented for the active Garmin Publication path. The legacy generic
+Garmin sync/upload scripts still use `garth` and `GARMIN_SECRET_STRING`.
+
 ## Context
 
-The current Garmin path still imports `garth` directly in
+The legacy Garmin path still imports `garth` directly in
 `run_page/garmin_sync.py`. It loads `GARMIN_SECRET_STRING` through
 `garth.client.loads(...)`, refreshes `garth.client.oauth2_token`, then calls
 Garmin Connect endpoints with that bearer token.
+
+The active archive-first publication path now uses
+`run_page/garmin_publication_client.py`, which wraps
+`cyberjunky/python-garminconnect` and reads `GARMIN_TOKENS_JSON`.
 
 The publication path depends on only two read capabilities from that wrapper:
 
@@ -31,12 +38,13 @@ Sources:
 
 - `run_page/garmin_sync.py` is async and uses `httpx.AsyncClient`, but the
   Garmin surface itself is small.
-- `run_page/garmin_publish.py` imports `Garmin` from `garmin_sync`, calls
+- `run_page/garmin_publish.py` imports `GarminPublicationClient`, calls
   `get_activities(...)`, then `download_activity(..., "fit")`.
-- `.github/workflows/garmin_publication.yml` currently runs Python 3.10.
+- `.github/workflows/garmin_publication.yml` now runs Python 3.12 because
+  current `garminconnect` requires Python >= 3.12.
 - `.github/workflows/ci.yml` still tests Python 3.9, 3.10, 3.11, and 3.12.
-- `requirements.txt` currently pins `garth==0.4.47` for Python < 3.10 and
-  `garth==0.8.0` for Python >= 3.10.
+- `requirements.txt` installs `garminconnect==0.3.8` on Python >= 3.12.
+- `requirements.txt` still keeps `garth` for inactive legacy Garmin scripts.
 
 ## Options
 
@@ -260,22 +268,45 @@ It can back up activity exports, including FIT, GPX, and TCX, and supports MFA,
 but its PyPI documentation says authentication is handed to `garth`. Because the
 goal is to move away from `garth`, it is not a viable replacement for this repo.
 
+## Implemented Migration
+
+The active Garmin Publication workflow now uses `python-garminconnect`:
+
+- `run_page/garmin_publish.py prepare` reads `GARMIN_TOKENS_JSON`.
+- `run_page/garmin_publication_client.py` loads the tokenstore into
+  `garminconnect.Garmin`.
+- `get_activities(start, limit)` maps to
+  `Garmin.get_activities(..., activitytype="running")`.
+- `download_activity(activity_id, "fit")` maps to
+  `Garmin.download_activity(..., ActivityDownloadFormat.ORIGINAL)`.
+- `.github/workflows/garmin_publication.yml` runs Python 3.12 and passes
+  `secrets.GARMIN_TOKENS_JSON`.
+
+Generate the tokenstore with Python 3.12+:
+
+```bash
+python run_page/get_garmin_tokens.py "$GARMIN_EMAIL" --tokenstore .garminconnect --print-secret
+```
+
+Then set the printed JSON as the GitHub Actions secret:
+
+```bash
+gh secret set GARMIN_TOKENS_JSON --repo zhengfran/running_page
+```
+
+Do not commit `.garminconnect/garmin_tokens.json`; it contains a refresh token.
+
 ## Recommendation
 
-Use `cyberjunky/python-garminconnect` as the primary migration target.
+Use `cyberjunky/python-garminconnect` as the active publication client.
 
 The smallest practical migration is:
 
-1. Add a new Garmin client adapter in this repo that preserves the current
-   async-ish surface used by `garmin_publish.py`:
-   `get_activities(start, limit)` and `download_activity(activity_id, "fit")`.
-2. Switch Garmin Publication to Python 3.12.
-3. Store a `garmin_tokens.json` secret or archive artifact instead of
-   `GARMIN_SECRET_STRING`.
-4. Keep the old `garth` path temporarily behind a fallback flag until one live
-   Garmin Publication run succeeds with the new client.
-5. After live validation, remove `garth` from `requirements.txt` and drop the
-   retry shim that only exists for `garth.client.refresh_oauth2`.
+1. Provision `GARMIN_TOKENS_JSON` in GitHub Actions.
+2. Run a manual Garmin Publication dry run with `publish=false`.
+3. If the dry run succeeds, run a manual publication with `publish=true`.
+4. After live validation, migrate or remove the inactive legacy Garmin scripts
+   that still depend on `garth`.
 
 Do not migrate to `garmin-auth`, `garmin-py`, or `garmin-health-data` first
 unless the project goal changes from a small publication pipeline to a broader

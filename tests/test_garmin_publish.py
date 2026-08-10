@@ -115,6 +115,23 @@ def test_discovery_stops_after_page_crosses_cutover():
     assert client.calls == 1
 
 
+def test_prepare_archive_requires_garmin_tokens_json(monkeypatch, tmp_path):
+    monkeypatch.delenv("GARMIN_TOKENS_JSON", raising=False)
+    args = types.SimpleNamespace(
+        archive_dir=tmp_path,
+        batch_file=tmp_path / "batch.json",
+        cutover=garmin_publish.DEFAULT_CUTOVER,
+        db=tmp_path / "data.db",
+    )
+
+    try:
+        asyncio.run(garmin_publish.prepare_archive(args))
+    except ValueError as err:
+        assert "GARMIN_TOKENS_JSON" in str(err)
+    else:
+        raise AssertionError("prepare_archive should require GARMIN_TOKENS_JSON")
+
+
 def test_normalization_uses_garmin_identity_title_and_redacted_route(monkeypatch):
     track_module = types.ModuleType("gpxtrackposter.track")
 

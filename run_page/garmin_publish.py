@@ -150,15 +150,18 @@ async def discover_candidates(client, cutover):
 
 
 async def prepare_archive(args):
-    secret = os.getenv("GARMIN_SECRET_STRING")
-    if not secret:
-        raise ValueError("GARMIN_SECRET_STRING is required")
+    tokenstore = os.getenv("GARMIN_TOKENS_JSON")
+    if not tokenstore:
+        raise ValueError(
+            "GARMIN_TOKENS_JSON is required. Generate a python-garminconnect "
+            "tokenstore and save its garmin_tokens.json content as a GitHub "
+            "Actions secret."
+        )
 
-    os.environ.setdefault("GARTH_TELEMETRY_ENABLED", "false")
-    from garmin_sync import Garmin
+    from garmin_publication_client import GarminPublicationClient
 
     cutover = parse_utc(args.cutover)
-    client = Garmin(secret, "GLOBAL", is_only_running=True)
+    client = GarminPublicationClient(tokenstore, is_only_running=True)
     try:
         candidates = await discover_candidates(client, cutover)
         published_ids = published_garmin_ids(args.db)
@@ -201,7 +204,7 @@ async def prepare_archive(args):
         )
         print(f"Prepared {len(candidates)} Garmin Run(s)")
     finally:
-        await client.req.aclose()
+        await client.aclose()
 
 
 def load_batch(path):
