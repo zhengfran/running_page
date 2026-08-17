@@ -160,8 +160,16 @@ async def prepare_archive(args):
 
     from garmin_publication_client import GarminPublicationClient
 
+    # Optional: lets a rejected/expired cached token self-heal via a fresh
+    # credential login instead of hard-failing. See
+    # GarminPublicationClient for details.
+    email = os.getenv("GARMIN_EMAIL")
+    password = os.getenv("GARMIN_PASSWORD")
+
     cutover = parse_utc(args.cutover)
-    client = GarminPublicationClient(tokenstore, is_only_running=True)
+    client = GarminPublicationClient(
+        tokenstore, is_only_running=True, email=email, password=password
+    )
     try:
         candidates = await discover_candidates(client, cutover)
         published_ids = published_garmin_ids(args.db)

@@ -296,6 +296,45 @@ gh secret set GARMIN_TOKENS_JSON --repo zhengfran/running_page
 
 Do not commit `.garminconnect/garmin_tokens.json`; it contains a refresh token.
 
+### Token self-heal (`GARMIN_EMAIL` / `GARMIN_PASSWORD`)
+
+`GARMIN_TOKENS_JSON` can go stale (Garmin revokes or expires the cached
+session) and the workflow has failed silently for days on a bare 401 before
+(2026-08-13 through 2026-08-16). `garminconnect==0.3.8`'s `Garmin.login()`
+already handles this: it tries the cached tokenstore first, and only if the
+API rejects that token does it discard it and fall back to a fresh
+username/password login — but only when `Garmin()` was constructed with
+credentials.
+
+`run_page/garmin_publication_client.py` now accepts optional `email`/
+`password` and forwards them into `Garmin(...)`, and
+`run_page/garmin_publish.py` reads them from the optional `GARMIN_EMAIL` /
+`GARMIN_PASSWORD` env vars. Set these as GitHub Actions secrets (same account
+as `GARMIN_TOKENS_JSON`) to get automatic recovery from a stale token without
+manual secret rotation:
+
+```bash
+gh secret set GARMIN_EMAIL --repo zhengfran/running_page
+gh secret set GARMIN_PASSWORD --repo zhengfran/running_page
+```
+
+Caveats:
+
+- Only safe if the account does **not** require MFA at login — the library's
+  `prompt_mfa` callback can't be answered headlessly in CI, so an MFA
+  challenge still hard-fails (with a clearer error pointing back at
+  `get_garmin_tokens.py`).
+- The refreshed token isn't written back to `GARMIN_TOKENS_JSON` (that would
+  need a secrets-write-scoped PAT in the workflow, which is a bigger secret
+  to hold than the password itself). This is intentionally accepted: since
+  the fallback only fires when the cached token is rejected, it costs one
+  extra SSO login per run for at most the days between a token going stale
+  and someone rotating `GARMIN_TOKENS_JSON` by hand — not a full login every
+  run.
+- Storing the raw account password is a larger blast radius than a scoped
+  session token if the secret ever leaks. Weigh that against the cost of
+  another silent multi-day outage.
+
 ## Recommendation
 
 Use `cyberjunky/python-garminconnect` as the active publication client.

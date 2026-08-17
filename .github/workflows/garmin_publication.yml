@@ -63,6 +63,11 @@ jobs:
       - name: Prepare Garmin archive batch
         env:
           GARMIN_TOKENS_JSON: ${{ secrets.GARMIN_TOKENS_JSON }}
+          # Fallback credentials: if the cached token is rejected (expired /
+          # revoked), garminconnect discards it and does a fresh login
+          # instead of hard-failing. Optional but recommended.
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: |
           python run_page/garmin_publish.py prepare \
             --archive-dir "$RUNNER_TEMP/running-fit-archive" \

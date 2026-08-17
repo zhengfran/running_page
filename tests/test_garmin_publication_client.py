@@ -26,7 +26,9 @@ class FakeGarmin:
 
     instances = []
 
-    def __init__(self, is_cn=False):
+    def __init__(self, email=None, password=None, is_cn=False):
+        self.email = email
+        self.password = password
         self.is_cn = is_cn
         self.login_tokenstore = None
         FakeGarmin.instances.append(self)
@@ -92,3 +94,23 @@ def test_publication_client_rejects_non_fit_downloads():
 
     with pytest.raises(ValueError, match="FIT"):
         asyncio.run(client.download_activity("123", "gpx"))
+
+
+def test_publication_client_forwards_credentials_for_token_self_heal():
+    module = load_module()
+
+    module.GarminPublicationClient(
+        "/tmp/tokenstore", email="runner@example.com", password="hunter2"
+    )
+
+    assert FakeGarmin.instances[0].email == "runner@example.com"
+    assert FakeGarmin.instances[0].password == "hunter2"
+
+
+def test_publication_client_defaults_credentials_to_none():
+    module = load_module()
+
+    module.GarminPublicationClient("/tmp/tokenstore")
+
+    assert FakeGarmin.instances[0].email is None
+    assert FakeGarmin.instances[0].password is None

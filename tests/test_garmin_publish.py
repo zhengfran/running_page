@@ -7,6 +7,8 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -130,6 +132,43 @@ def test_prepare_archive_requires_garmin_tokens_json(monkeypatch, tmp_path):
         assert "GARMIN_TOKENS_JSON" in str(err)
     else:
         raise AssertionError("prepare_archive should require GARMIN_TOKENS_JSON")
+
+
+def test_prepare_archive_forwards_email_password_for_token_self_heal(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("GARMIN_TOKENS_JSON", '{"di_token":"stale"}')
+    monkeypatch.setenv("GARMIN_EMAIL", "runner@example.com")
+    monkeypatch.setenv("GARMIN_PASSWORD", "hunter2")
+
+    captured = {}
+
+    class _StopEarly(Exception):
+        pass
+
+    class FakeGarminPublicationClient:
+        def __init__(self, tokenstore, is_only_running=True, email=None, password=None):
+            captured["tokenstore"] = tokenstore
+            captured["email"] = email
+            captured["password"] = password
+            raise _StopEarly
+
+    fake_module = types.ModuleType("garmin_publication_client")
+    fake_module.GarminPublicationClient = FakeGarminPublicationClient
+    monkeypatch.setitem(sys.modules, "garmin_publication_client", fake_module)
+
+    args = types.SimpleNamespace(
+        archive_dir=tmp_path,
+        batch_file=tmp_path / "batch.json",
+        cutover=garmin_publish.DEFAULT_CUTOVER,
+        db=tmp_path / "data.db",
+    )
+
+    with pytest.raises(_StopEarly):
+        asyncio.run(garmin_publish.prepare_archive(args))
+
+    assert captured["email"] == "runner@example.com"
+    assert captured["password"] == "hunter2"
 
 
 def test_normalization_uses_garmin_identity_title_and_redacted_route(monkeypatch):
