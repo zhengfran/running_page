@@ -21,3 +21,6 @@ _site/
 config.yaml
 .garminconnect/
 .venv/
+
+# Agent session scaffolding
+.claude/
