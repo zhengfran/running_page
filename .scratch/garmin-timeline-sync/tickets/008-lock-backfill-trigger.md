@@ -42,3 +42,9 @@ Proposal above confirmed (Q23).
 
 - **No first-run/steady-state distinction exists.** The Sync Window is a `--days` parameter defaulting to 7; scheduled runs pass nothing, `workflow_dispatch` exposes a `days` input. The one-time 30-day backfill is a dispatch with `days: 30`, and that same dispatch is the escape hatch Q12 asked for — importing more history later needs no code change.
 - **Schedule: 14:00 UTC** (22:00 Beijing). Chosen for operational tidiness rather than correctness: the 7-day window with last-sync-wins self-heals, so a run catching unfinalised sleep is corrected on each of the next six days. What matters is staying clear of `garmin_publication.yml` at 00:00 UTC, because ticket 002 found Garmin rate-limits *login* per-account with 48h+ soft-bans — the two jobs must never contend for one.
+
+## Amendment — schedule moved to 01:00 UTC
+
+The resolution above chose 14:00 UTC purely for operational tidiness, noting the clock barely affects correctness. The user subsequently asked for 09:00 Singapore, which is **01:00 UTC**, and the workflow and spec now say so.
+
+The reasoning is unchanged and still holds: the only real constraint is not contending with `garmin_publication.yml`'s Garmin login at 00:00 UTC, and an hour's separation is ample for a job that finishes in well under that. Running shortly after waking will sometimes catch sleep Garmin has not finished finalising — which the 7-day window corrects on each of the next six days.

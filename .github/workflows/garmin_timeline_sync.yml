@@ -1,10 +1,10 @@
 name: Garmin Timeline Sync
 
 on:
-  # The daily schedule is enabled only at rollout step 5, after a dispatched
-  # run has been validated by hand. See docs/garmin-timeline-sync-plan.md.
-  #   schedule:
-  #     - cron: '0 14 * * *'
+  # 09:00 Singapore. Kept an hour clear of garmin_publication.yml at 00:00 UTC
+  # so the two jobs never contend for a Garmin login.
+  schedule:
+    - cron: '0 1 * * *'
   workflow_dispatch:
     inputs:
       days:

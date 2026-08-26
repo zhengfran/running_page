@@ -86,12 +86,12 @@ Times come from Garmin's `*GMT` fields throughout. The `*Local` fields are doubl
 
 ## Workflow
 
-- Schedule `14:00 UTC`, well clear of `garmin_publication.yml` at `00:00 UTC`.
+- Schedule `01:00 UTC`, which is 09:00 Singapore. An hour clear of `garmin_publication.yml` at `00:00 UTC`, so the two jobs never contend for a Garmin login.
 - `workflow_dispatch` exposes a `days` input. The script takes `--days`, defaulting to `7`.
 - The one-time backfill is a dispatch with `days: 30`. Importing more history later is the same dispatch with a larger number, and needs no code change. There is no first-run versus steady-state distinction.
 - Secrets: `GARMIN_TOKENS_JSON`, `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GCAL_WORKOUTS_CALENDAR_ID`, `GCAL_SLEEP_CALENDAR_ID`.
 
-The schedule barely affects correctness. A run that catches unfinalised sleep is corrected on each of the next six days, because the window self-heals.
+The schedule barely affects correctness. Running shortly after waking will sometimes catch sleep that Garmin has not finished finalising, and that is fine: the record is rewritten on each of the next six days, because the window self-heals. What the clock does matter for is login contention, which is why the two jobs are kept apart.
 
 ## Failure
 
@@ -116,7 +116,7 @@ Live behaviour was verified once during provisioning, not in CI: tombstone reviv
 2. Dispatch once with `days: 3` and inspect both Timeline Calendars by hand.
 3. Dispatch once with `days: 30` for the backfill.
 4. Re-dispatch with `days: 30` and confirm nothing duplicates — the idempotency proof.
-5. Enable the `14:00 UTC` schedule.
+5. Enable the `01:00 UTC` schedule.
 
 ## Release Gate
 
