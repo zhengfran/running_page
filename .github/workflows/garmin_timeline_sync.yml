@@ -1,8 +1,10 @@
 name: Garmin Timeline Sync
 
 on:
-  schedule:
-    - cron: '0 14 * * *'
+  # The daily schedule is enabled only at rollout step 5, after a dispatched
+  # run has been validated by hand. See docs/garmin-timeline-sync-plan.md.
+  #   schedule:
+  #     - cron: '0 14 * * *'
   workflow_dispatch:
     inputs:
       days:
