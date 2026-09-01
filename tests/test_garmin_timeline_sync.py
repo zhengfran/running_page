@@ -236,13 +236,32 @@ def test_non_conflict_errors_are_not_swallowed():
 
 def test_zero_sleep_records_in_the_window_fails_loudly():
     dates = sync.window_dates(7, dt.date(2026, 8, 25))
-    with pytest.raises(ValueError, match="No Sleep records"):
+    with pytest.raises(ValueError, match="2026-08-19"):
         sync.check_sleep_canary([], dates)
 
 
-def test_canary_passes_when_any_sleep_record_exists():
+def test_canary_requires_every_completed_day():
     dates = sync.window_dates(7, dt.date(2026, 8, 25))
-    sync.check_sleep_canary([sync.sleep_event(SLEEP)], dates)
+    # A record for the in-progress day does not prove the prior six days
+    # synced. This is the stale-response failure mode the canary guards.
+    with pytest.raises(ValueError, match="2026-08-24"):
+        sync.check_sleep_canary([sync.sleep_event(SLEEP)], dates)
+
+
+def test_canary_allows_only_the_most_recent_day_to_be_missing():
+    dates = sync.window_dates(7, dt.date(2026, 8, 25))
+    events = [
+        sync.sleep_event(
+            {
+                "dailySleepDTO": {
+                    **SLEEP["dailySleepDTO"],
+                    "calendarDate": date.isoformat(),
+                }
+            }
+        )
+        for date in dates[1:]
+    ]
+    sync.check_sleep_canary(events, dates)
 
 
 def test_single_day_window_is_exempt_from_the_canary():

@@ -217,17 +217,27 @@ def window_dates(days, today=None):
 
 
 def check_sleep_canary(events, dates):
-    """Sleep happens nightly, so zero records is a bug, never a valid state.
+    """Require every completed day in the window to have a Sleep record.
 
     The most recent day is excluded: it may legitimately have no record yet
-    at the time the job runs.
+    at the time the job runs. Checking only for *any* record lets a stale
+    Garmin response make a run look healthy while newer days stop syncing.
     """
     if len(dates) < 2:
         return
-    if not events:
+    expected_ids = {sleep_event_id(date) for date in dates[1:]}
+    received_ids = {event.event_id for event in events}
+    missing_ids = expected_ids - received_ids
+    if missing_ids:
+        missing_dates = sorted(
+            f"{event_id[1:5]}-{event_id[5:7]}-{event_id[7:9]}"
+            for event_id in missing_ids
+        )
         raise ValueError(
-            f"No Sleep records in a {len(dates)}-day Sync Window. Garmin's "
-            "response shape has probably changed; refusing to report success."
+            "Missing Sleep records for completed day(s) in the "
+            f"{len(dates)}-day Sync Window: {', '.join(missing_dates)}. "
+            "Garmin's response shape has probably changed; refusing to "
+            "report success."
         )
 
 
