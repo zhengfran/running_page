@@ -217,25 +217,30 @@ def window_dates(days, today=None):
 
 
 def check_sleep_canary(events, dates):
-    """Require every completed day in the window to have a Sleep record.
+    """Detect a stalled Garmin sleep feed without rejecting a no-watch night.
 
     The most recent day is excluded: it may legitimately have no record yet
-    at the time the job runs. Checking only for *any* record lets a stale
-    Garmin response make a run look healthy while newer days stop syncing.
+    at the time the job runs. A missing completed day is expected when the
+    watch was not worn, so it is tolerated when Garmin has a record for the
+    following day. A missing date *without* its following day's record is a
+    leading-edge gap and still fails loudly rather than masking a stalled
+    feed with an older, stale record.
     """
     if len(dates) < 2:
         return
-    expected_ids = {sleep_event_id(date) for date in dates[1:]}
     received_ids = {event.event_id for event in events}
-    missing_ids = expected_ids - received_ids
-    if missing_ids:
-        missing_dates = sorted(
-            f"{event_id[1:5]}-{event_id[5:7]}-{event_id[7:9]}"
-            for event_id in missing_ids
-        )
+    unexplained_dates = []
+    for index, date in enumerate(dates[1:], start=1):
+        if sleep_event_id(date) in received_ids:
+            continue
+        following_date = dates[index - 1]
+        if sleep_event_id(following_date) not in received_ids:
+            unexplained_dates.append(date.isoformat())
+
+    if unexplained_dates:
         raise ValueError(
-            "Missing Sleep records for completed day(s) in the "
-            f"{len(dates)}-day Sync Window: {', '.join(missing_dates)}. "
+            "Missing Sleep records without a following-day record in the "
+            f"{len(dates)}-day Sync Window: {', '.join(unexplained_dates)}. "
             "Garmin's response shape has probably changed; refusing to "
             "report success."
         )
