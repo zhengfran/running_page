@@ -250,8 +250,42 @@ def test_canary_rejects_missing_sleep_without_a_following_day_record():
             }
         }
     )
-    with pytest.raises(ValueError, match="2026-08-24"):
+    with pytest.raises(ValueError, match="2026-08-23"):
         sync.check_sleep_canary([stale], dates)
+
+
+def test_canary_allows_the_last_two_days_missing_before_today_syncs():
+    # A no-watch night followed by a run before today's record has synced.
+    dates = sync.window_dates(7, dt.date(2026, 8, 25))
+    events = [
+        sync.sleep_event(
+            {
+                "dailySleepDTO": {
+                    **SLEEP["dailySleepDTO"],
+                    "calendarDate": date.isoformat(),
+                }
+            }
+        )
+        for date in dates[2:]
+    ]
+    sync.check_sleep_canary(events, dates)
+
+
+def test_canary_catches_a_stall_on_the_following_run():
+    dates = sync.window_dates(7, dt.date(2026, 8, 25))
+    events = [
+        sync.sleep_event(
+            {
+                "dailySleepDTO": {
+                    **SLEEP["dailySleepDTO"],
+                    "calendarDate": date.isoformat(),
+                }
+            }
+        )
+        for date in dates[3:]
+    ]
+    with pytest.raises(ValueError, match="2026-08-23"):
+        sync.check_sleep_canary(events, dates)
 
 
 def test_canary_allows_missing_sleep_when_the_following_day_is_present():

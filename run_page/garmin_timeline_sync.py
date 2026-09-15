@@ -224,7 +224,9 @@ def check_sleep_canary(events, dates):
     watch was not worn, so it is tolerated when Garmin has a record for the
     following day. A missing date *without* its following day's record is a
     leading-edge gap and still fails loudly rather than masking a stalled
-    feed with an older, stale record.
+    feed with an older, stale record. The one exception is the day before
+    the most recent: its following day may simply not have synced yet, so
+    that gap is undecidable until the next run, which catches a real stall.
     """
     if len(dates) < 2:
         return
@@ -234,8 +236,9 @@ def check_sleep_canary(events, dates):
         if sleep_event_id(date) in received_ids:
             continue
         following_date = dates[index - 1]
-        if sleep_event_id(following_date) not in received_ids:
-            unexplained_dates.append(date.isoformat())
+        if sleep_event_id(following_date) in received_ids or index == 1:
+            continue
+        unexplained_dates.append(date.isoformat())
 
     if unexplained_dates:
         raise ValueError(
