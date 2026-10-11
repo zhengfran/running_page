@@ -181,8 +181,10 @@ def test_timeline_event_body_carries_only_allowlisted_keys():
 
 @pytest.mark.parametrize(
     "event, expected_title",
-    [(sync.activity_event(ACTIVITY), "Health - Run (10.2 km)"),
-     (sync.sleep_event(SLEEP), "Health - Sleep")],
+    [
+        (sync.activity_event(ACTIVITY), "Health - Run (10.2 km)"),
+        (sync.sleep_event(SLEEP), "Health - Sleep"),
+    ],
     ids=["activity", "sleep"],
 )
 def test_body_follows_time_log_conventions(event, expected_title):
