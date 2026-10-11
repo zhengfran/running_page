@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   sync:
-    name: Mirror Garmin Activities and Sleep to the Timeline
+    name: Mirror Garmin Activities and Sleep to the LifeOS Time Log
     runs-on: ubuntu-latest
 
     steps:
@@ -50,6 +50,9 @@ jobs:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          GCAL_WORKOUTS_CALENDAR_ID: ${{ secrets.GCAL_WORKOUTS_CALENDAR_ID }}
-          GCAL_SLEEP_CALENDAR_ID: ${{ secrets.GCAL_SLEEP_CALENDAR_ID }}
+          # The owner's LifeOS Time Log. It must be shared with the service
+          # account's client_email with "Make changes to events" (ADR 0010).
+          TIME_LOG_CALENDAR_ID: ${{ secrets.TIME_LOG_CALENDAR_ID }}
+          # LifeOS Area colour for Sleep and workouts: 10 = Health (Basil).
+          TIME_LOG_AREA_COLOR_ID: ${{ vars.TIME_LOG_AREA_COLOR_ID || '10' }}
         run: python run_page/garmin_timeline_sync.py --days "${{ inputs.days || 7 }}"

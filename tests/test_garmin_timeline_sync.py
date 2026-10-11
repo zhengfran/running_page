@@ -63,23 +63,37 @@ SLEEP = {
 
 
 class StubEvents:
-    def __init__(self, taken=()):
-        self.taken = set(taken)
+    """An in-memory calendar keyed by event id; tombstones stay in place."""
+
+    def __init__(self, existing=None):
+        self.store = dict(existing or {})
         self.calls = []
+        self._result = {}
 
     def insert(self, calendarId, body, sendUpdates):
         self.calls.append(("insert", body.get("id"), body))
-        if body["id"] in self.taken:
+        if body["id"] in self.store:
             raise FakeHttpError(409)
-        self.taken.add(body["id"])
+        self.store[body["id"]] = {**body, "status": "confirmed"}
+        self._result = self.store[body["id"]]
+        return self
+
+    def get(self, calendarId, eventId):
+        self.calls.append(("get", eventId, None))
+        self._result = self.store[eventId]
         return self
 
     def patch(self, calendarId, eventId, body, sendUpdates):
         self.calls.append(("patch", eventId, body))
+        self.store[eventId] = {**self.store[eventId], **body}
+        self._result = self.store[eventId]
         return self
 
     def execute(self):
-        return {}
+        return self._result
+
+    def kinds(self):
+        return [call[0] for call in self.calls]
 
 
 class FakeHttpError(Exception):
@@ -96,18 +110,39 @@ class StubService:
         return self._events
 
 
+def client_over(events):
+    return calendar_client.TimelineCalendarClient(
+        None, "time-log", service=StubService(events)
+    )
+
+
+def write(client, event):
+    return client.insert_or_patch(
+        event.event_id, event.body(), event.patch_body(), sync.MARKER
+    )
+
+
 # --- id derivation -------------------------------------------------------
 
 
 def test_activity_and_sleep_ids_conform_and_cannot_collide():
     activity = sync.activity_event_id(12345678901)
     sleep = sync.sleep_event_id("2026-08-25")
-    assert activity == "a12345678901"
-    assert sleep == "b20260825"
-    assert activity[0] != sleep[0]
+    assert activity != sleep
+    # The same Garmin number under the other kind is still a different id.
+    assert sync.activity_event_id("2026-08-25") != sleep
     for event_id in (activity, sleep):
         assert set(event_id) <= sync.ID_ALPHABET
         assert 5 <= len(event_id) <= 1024
+
+
+def test_ids_are_deterministic_and_pinned():
+    # Pinned: changing the derivation would duplicate every event already
+    # written to the Time Log.
+    assert sync.activity_event_id(12345678901) == sync.activity_event_id(
+        " 12345678901 "
+    )
+    assert sync.activity_event_id(12345678901) == "5a75670aee8daf017a0f717f5e81b498"
 
 
 @pytest.mark.parametrize("bad", ["z123456", "a-123456", "aWXYZ123", "a1"])
@@ -129,7 +164,64 @@ def test_activity_event_excludes_location_and_route_fields():
 
 def test_timeline_event_body_carries_only_allowlisted_keys():
     body = sync.activity_event(ACTIVITY).body()
-    assert set(body) == {"summary", "description", "start", "end"}
+    assert set(body) == {
+        "summary",
+        "description",
+        "start",
+        "end",
+        "colorId",
+        "transparency",
+        "reminders",
+        "extendedProperties",
+    }
+
+
+# --- LifeOS Time Log conventions ----------------------------------------
+
+
+@pytest.mark.parametrize(
+    "event",
+    [sync.activity_event(ACTIVITY), sync.sleep_event(SLEEP)],
+    ids=["activity", "sleep"],
+)
+def test_body_follows_time_log_conventions(event):
+    body = event.body()
+    assert body["colorId"] == "10"  # Health / Basil
+    assert body["transparency"] == "transparent"
+    assert body["reminders"] == {"useDefault": False}
+    # Timed, never all-day.
+    assert "date" not in body["start"] and "date" not in body["end"]
+    assert body["start"]["dateTime"].endswith("Z")
+    assert not body["summary"].startswith("[")  # no Project prefix
+    private = body["extendedProperties"]["private"]
+    assert private["lifeos"] == "time-log/1"
+    assert private["source"] == "garmin"
+    assert private["garmin_kind"] == event.kind
+    assert all(isinstance(value, str) for value in private.values())
+
+
+def test_activity_marker_carries_the_garmin_id():
+    private = sync.activity_event(ACTIVITY).private_properties()
+    assert private["garmin_id"] == "12345678901"
+    assert sync.sleep_event(SLEEP).private_properties()["garmin_id"] == "2026-08-25"
+
+
+def test_area_color_is_configurable():
+    assert sync.activity_event(ACTIVITY, color_id="9").body()["colorId"] == "9"
+    assert sync.valid_color_id(None) == "10"
+    assert sync.valid_color_id("") == "10"
+    assert sync.valid_color_id(" 4 ") == "4"
+
+
+@pytest.mark.parametrize("bad", ["0", "12", "basil", "10.0"])
+def test_invalid_area_color_is_rejected(bad):
+    with pytest.raises(ValueError):
+        sync.valid_color_id(bad)
+
+
+def test_calendar_id_is_required():
+    with pytest.raises(ValueError):
+        calendar_client.TimelineCalendarClient(None, "", service=object())
 
 
 def test_sleep_event_excludes_nap_aggregate():
@@ -149,21 +241,49 @@ def test_activity_end_uses_elapsed_not_moving_duration():
 
 
 def test_activity_title_is_composed():
-    assert sync.activity_event(ACTIVITY).title == "Running · 10.2 km"
+    assert sync.activity_event(ACTIVITY).title == "Run 10.2 km"
 
 
 def test_activity_without_distance_falls_back_to_type_name():
     event = sync.activity_event(
         {**ACTIVITY, "distance": 0, "activityType": {"typeKey": "strength_training"}}
     )
-    assert event.title == "Strength Training"
+    assert event.title == "Strength training"
 
 
-def test_sleep_maps_epoch_millis_and_carries_score_in_title():
+@pytest.mark.parametrize(
+    "type_key, title",
+    [
+        ("road_biking", "Ride 10.2 km"),
+        ("lap_swimming", "Pool swim 10.2 km"),
+        ("some_new_sport", "Some new sport 10.2 km"),
+        (None, "Activity 10.2 km"),
+    ],
+)
+def test_activity_titles_stay_short(type_key, title):
+    event = sync.activity_event({**ACTIVITY, "activityType": {"typeKey": type_key}})
+    assert event.title == title
+
+
+def test_sleep_maps_epoch_millis_and_keeps_score_out_of_title():
     event = sync.sleep_event(SLEEP)
-    assert event.title == "Sleep · 84"
+    assert event.title == "Sleep"
+    assert "Score: 84 (GOOD)" in event.description
     assert event.start_utc.endswith("Z") and event.end_utc.endswith("Z")
     assert event.start_utc < event.end_utc
+
+
+def test_sleep_with_non_positive_span_is_skipped():
+    daily = {**SLEEP["dailySleepDTO"]}
+    daily["sleepEndTimestampGMT"] = daily["sleepStartTimestampGMT"]
+    assert sync.sleep_event({"dailySleepDTO": daily}) is None
+
+
+def test_activity_crossing_midnight_keeps_exact_instants():
+    event = sync.activity_event({**ACTIVITY, "startTimeGMT": "2026-08-25 15:30:00"})
+    # 23:30 to 00:30 Singapore: one timed event, never split or all-day.
+    assert event.start_utc == "2026-08-25T15:30:00Z"
+    assert event.end_utc == "2026-08-25T16:30:00Z"
 
 
 def test_sleep_ignores_local_timestamps_and_uses_gmt():
@@ -187,36 +307,88 @@ def test_unplaceable_records_are_skipped():
 
 def test_insert_succeeds_when_id_is_free():
     events = StubEvents()
-    client = calendar_client.TimelineCalendarClient(
-        None, "cal", service=StubService(events)
-    )
-    event = sync.activity_event(ACTIVITY)
-    outcome = client.insert_or_patch(event.event_id, event.body(), event.patch_body())
+    outcome = write(client_over(events), sync.activity_event(ACTIVITY))
     assert outcome == calendar_client.INSERTED
-    assert [call[0] for call in events.calls] == ["insert"]
+    assert events.kinds() == ["insert"]
 
 
-def test_conflict_falls_through_to_patch():
+def test_rerun_is_idempotent_and_never_duplicates():
+    events = StubEvents()
+    client = client_over(events)
+    batch = [sync.activity_event(ACTIVITY), sync.sleep_event(SLEEP)]
+    first = sync.write_events(batch, client)
+    second = sync.write_events(batch, client)
+    assert first["inserted"] == 2
+    assert second["inserted"] == 0
+    assert second["unchanged"] == 1 and second["patched"] == 1
+    assert len(events.store) == 2
+
+
+def test_activity_conflict_is_append_only():
     event = sync.activity_event(ACTIVITY)
-    events = StubEvents(taken={event.event_id})
-    client = calendar_client.TimelineCalendarClient(
-        None, "cal", service=StubService(events)
-    )
-    outcome = client.insert_or_patch(event.event_id, event.body(), event.patch_body())
+    events = StubEvents()
+    client = client_over(events)
+    write(client, event)
+    changed = sync.activity_event({**ACTIVITY, "elapsedDuration": 4000.0})
+    assert write(client, changed) == calendar_client.UNCHANGED
+    assert "patch" not in events.kinds()
+    assert events.store[event.event_id]["end"]["dateTime"] == "2026-08-25T07:30:00Z"
+
+
+def test_sleep_conflict_patches_our_own_event_with_latest_content():
+    event = sync.sleep_event(SLEEP)
+    events = StubEvents()
+    client = client_over(events)
+    write(client, event)
+    revised = {**SLEEP["dailySleepDTO"], "sleepEndTimestampGMT": 1761130200000}
+    outcome = write(client, sync.sleep_event({"dailySleepDTO": revised}))
     assert outcome == calendar_client.PATCHED
-    assert [call[0] for call in events.calls] == ["insert", "patch"]
+    assert events.store[event.event_id]["end"]["dateTime"] == "2025-10-22T10:50:00Z"
+    assert events.store[event.event_id]["colorId"] == "10"
 
 
-def test_activity_patch_carries_status_only_so_append_only_holds():
-    patch = sync.activity_event(ACTIVITY).patch_body()
-    assert patch == {"status": "confirmed"}
+def test_conflict_with_unmarked_event_is_never_edited():
+    event = sync.sleep_event(SLEEP)
+    hand_logged = {"id": event.event_id, "summary": "Sleep", "status": "confirmed"}
+    events = StubEvents({event.event_id: hand_logged})
+    outcome = write(client_over(events), event)
+    assert outcome == calendar_client.SKIPPED_FOREIGN
+    assert events.kinds() == ["insert", "get"]
+    assert events.store[event.event_id] == hand_logged
 
 
-def test_sleep_patch_carries_content_and_revives_tombstone():
+def test_conflict_with_other_source_marker_is_never_edited():
+    event = sync.sleep_event(SLEEP)
+    other = {
+        "id": event.event_id,
+        "status": "confirmed",
+        "extendedProperties": {
+            "private": {"lifeos": "time-log/1", "source": "android"}
+        },
+    }
+    events = StubEvents({event.event_id: other})
+    assert write(client_over(events), event) == calendar_client.SKIPPED_FOREIGN
+    assert "patch" not in events.kinds()
+
+
+def test_event_deleted_by_the_owner_stays_deleted():
+    event = sync.sleep_event(SLEEP)
+    events = StubEvents()
+    client = client_over(events)
+    write(client, event)
+    events.store[event.event_id]["status"] = "cancelled"
+    assert write(client, event) == calendar_client.SKIPPED_DELETED
+    assert "patch" not in events.kinds()
+    assert events.store[event.event_id]["status"] == "cancelled"
+
+
+def test_activity_patch_body_is_none_and_sleep_patch_carries_content():
+    assert sync.activity_event(ACTIVITY).patch_body() is None
     patch = sync.sleep_event(SLEEP).patch_body()
-    assert patch["status"] == "confirmed"
-    assert patch["summary"] == "Sleep · 84"
+    assert patch["summary"] == "Sleep"
+    assert patch["colorId"] == "10"
     assert "start" in patch and "end" in patch
+    assert "status" not in patch  # a tombstone is never revived
 
 
 def test_non_conflict_errors_are_not_swallowed():
@@ -224,11 +396,13 @@ def test_non_conflict_errors_are_not_swallowed():
         def insert(self, calendarId, body, sendUpdates):
             raise FakeHttpError(500)
 
-    client = calendar_client.TimelineCalendarClient(
-        None, "cal", service=StubService(Boom())
-    )
     with pytest.raises(FakeHttpError):
-        client.insert_or_patch("a1234567", {}, {})
+        client_over(Boom()).insert_or_patch("a1234567", {}, {}, sync.MARKER)
+
+
+def test_preview_lists_events_without_a_calendar():
+    lines = sync.preview([sync.sleep_event(SLEEP), sync.activity_event(ACTIVITY)])
+    assert "Run 10.2 km" in lines and '"colorId": "10"' in lines
 
 
 # --- canary --------------------------------------------------------------
