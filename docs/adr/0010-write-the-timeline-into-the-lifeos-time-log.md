@@ -17,3 +17,7 @@ Because the calendar is shared with hand-logged entries, a `409` is no longer pa
 Overlap with a hand-logged event is accepted, because Time Log coverage is measured by the union of events.
 
 The service account no longer owns the target calendar. The owner owns the Time Log and shares it with the service account with "Make changes to events". This removes the single point of failure that ADR 0009 worked around with co-ownership. The scope narrows from `calendar` to `calendar.events`.
+
+## Migration (2026-10-11)
+
+The history in the old Workouts and Sleep calendars was copied into the Time Log by a one-off, insert-only migration that rebuilt each `a<activityId>` / `b<YYYYMMDD>` event with this ADR's hashed ids, titles and marker: 63 inserted, 1 already present (commits 847477d, d990c51). After a checked dry run confirmed that the service account owned both calendars and that every event had a live, marked copy in the Time Log, both old calendars were deleted (1fcc2d7). The one-off scripts and workflow were then removed; they remain in git history. The `GCAL_SLEEP_CALENDAR_ID` and `GCAL_WORKOUTS_CALENDAR_ID` secrets are no longer read.
