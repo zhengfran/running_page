@@ -105,3 +105,78 @@ def test_old_activity_titles_become_the_daily_sync_titles():
     assert migrate.activity_title("Running · 10.2 km") == "Run 10.2 km"
     assert migrate.activity_title("Strength Training") == "Strength training"
     assert migrate.activity_title("Cycling · 32.5 km") == "Ride 32.5 km"
+
+
+deleter = load("delete_old_timeline_calendars")
+
+
+class _Call:
+    def __init__(self, value):
+        self.value = value
+
+    def execute(self):
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value
+
+
+class FakeService:
+    """Old calendar 'old' holds one sleep; the Time Log holds what `copies` says."""
+
+    def __init__(self, copies, role="owner"):
+        self.copies, self.role = copies, role
+
+    def events(self):
+        service = self
+
+        class Events:
+            def list(self, calendarId, **_):
+                return _Call(
+                    {
+                        "items": [
+                            {
+                                "id": "b20260825",
+                                "summary": "Sleep",
+                                "start": {"dateTime": "2026-08-24T15:40:00Z"},
+                                "end": {"dateTime": "2026-08-24T23:05:00Z"},
+                            }
+                        ]
+                    }
+                )
+
+            def get(self, calendarId, eventId):
+                return _Call(service.copies.get(eventId, LookupError("404")))
+
+        return Events()
+
+    def calendarList(self):
+        service = self
+
+        class CalendarList:
+            def get(self, calendarId):
+                return _Call({"accessRole": service.role})
+
+        return CalendarList()
+
+
+SLEEP_ID = sync.sleep_event_id("2026-08-25")
+MARKED = {"status": "confirmed", "extendedProperties": {"private": dict(sync.MARKER)}}
+
+
+def test_deletion_is_allowed_only_when_every_event_is_safely_copied():
+    assert deleter.check(FakeService({SLEEP_ID: MARKED}), "old", "timelog") == []
+    assert "not in the Time Log" in deleter.check(FakeService({}), "old", "timelog")[0]
+    unmarked = {"status": "confirmed", "extendedProperties": {"private": {}}}
+    assert deleter.check(FakeService({SLEEP_ID: unmarked}), "old", "timelog")
+    assert deleter.check(
+        FakeService({SLEEP_ID: {**MARKED, "status": "cancelled"}}), "old", "timelog"
+    )
+
+
+def test_never_deletes_the_time_log_or_a_calendar_it_does_not_own():
+    assert deleter.check(FakeService({SLEEP_ID: MARKED}), "timelog", "timelog") == [
+        "it is the Time Log"
+    ]
+    assert deleter.check(
+        FakeService({SLEEP_ID: MARKED}, role="writer"), "old", "timelog"
+    ) == ["service account is writer, not owner"]
