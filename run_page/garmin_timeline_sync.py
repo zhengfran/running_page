@@ -94,7 +94,7 @@ class TimelineEvent:
 
     def body(self):
         return {
-            "summary": "Health",
+            "summary": f"Health - {self.title}",
             "description": f"{self.title}\n\n{self.description}",
             "start": {"dateTime": self.start_utc},
             "end": {"dateTime": self.end_utc},
@@ -198,7 +198,7 @@ def activity_event(activity, color_id=DEFAULT_AREA_COLOR_ID):
     distance = activity.get("distance")
     title = type_name
     if distance:
-        title = f"{type_name} {float(distance) / 1000:.1f} km"
+        title = f"{type_name} ({float(distance) / 1000:.1f} km)"
 
     moving = activity.get("movingDuration")
     lines = [

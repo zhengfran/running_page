@@ -180,11 +180,12 @@ def test_timeline_event_body_carries_only_allowlisted_keys():
 
 
 @pytest.mark.parametrize(
-    "event",
-    [sync.activity_event(ACTIVITY), sync.sleep_event(SLEEP)],
+    "event, expected_title",
+    [(sync.activity_event(ACTIVITY), "Health - Run (10.2 km)"),
+     (sync.sleep_event(SLEEP), "Health - Sleep")],
     ids=["activity", "sleep"],
 )
-def test_body_follows_time_log_conventions(event):
+def test_body_follows_time_log_conventions(event, expected_title):
     body = event.body()
     assert body["colorId"] == "10"  # Health / Basil
     assert body["transparency"] == "transparent"
@@ -192,7 +193,7 @@ def test_body_follows_time_log_conventions(event):
     # Timed, never all-day.
     assert "date" not in body["start"] and "date" not in body["end"]
     assert body["start"]["dateTime"].endswith("Z")
-    assert body["summary"] == "Health"  # no Project selected
+    assert body["summary"] == expected_title
     assert body["description"] == f"{event.title}\n\n{event.description}"
     private = body["extendedProperties"]["private"]
     assert private["lifeos"] == "time-log/1"
@@ -242,7 +243,7 @@ def test_activity_end_uses_elapsed_not_moving_duration():
 
 
 def test_activity_title_is_composed():
-    assert sync.activity_event(ACTIVITY).title == "Run 10.2 km"
+    assert sync.activity_event(ACTIVITY).title == "Run (10.2 km)"
 
 
 def test_activity_without_distance_falls_back_to_type_name():
@@ -250,15 +251,16 @@ def test_activity_without_distance_falls_back_to_type_name():
         {**ACTIVITY, "distance": 0, "activityType": {"typeKey": "strength_training"}}
     )
     assert event.title == "Strength training"
+    assert event.body()["summary"] == "Health - Strength training"
 
 
 @pytest.mark.parametrize(
     "type_key, title",
     [
-        ("road_biking", "Ride 10.2 km"),
-        ("lap_swimming", "Pool swim 10.2 km"),
-        ("some_new_sport", "Some new sport 10.2 km"),
-        (None, "Activity 10.2 km"),
+        ("road_biking", "Ride (10.2 km)"),
+        ("lap_swimming", "Pool swim (10.2 km)"),
+        ("some_new_sport", "Some new sport (10.2 km)"),
+        (None, "Activity (10.2 km)"),
     ],
 )
 def test_activity_titles_stay_short(type_key, title):
@@ -386,7 +388,7 @@ def test_event_deleted_by_the_owner_stays_deleted():
 def test_activity_patch_body_is_none_and_sleep_patch_carries_content():
     assert sync.activity_event(ACTIVITY).patch_body() is None
     patch = sync.sleep_event(SLEEP).patch_body()
-    assert patch["summary"] == "Health"
+    assert patch["summary"] == "Health - Sleep"
     assert patch["description"].startswith("Sleep\n\n")
     assert patch["colorId"] == "10"
     assert "start" in patch and "end" in patch
@@ -404,7 +406,7 @@ def test_non_conflict_errors_are_not_swallowed():
 
 def test_preview_lists_events_without_a_calendar():
     lines = sync.preview([sync.sleep_event(SLEEP), sync.activity_event(ACTIVITY)])
-    assert "Run 10.2 km" in lines and '"colorId": "10"' in lines
+    assert "Run (10.2 km)" in lines and '"colorId": "10"' in lines
 
 
 # --- canary --------------------------------------------------------------
