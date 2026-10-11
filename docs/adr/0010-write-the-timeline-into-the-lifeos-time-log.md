@@ -2,7 +2,7 @@
 
 The Timeline Sync now writes Activities and Sleep into one calendar: the owner's LifeOS Time Log, a Lyubishchev time ledger that the owner also fills by hand from a phone app and from Google Calendar. The two Timeline Calendars that the service account owned are no longer written to. They are left in place, untouched.
 
-The Time Log has conventions of its own, and every Timeline Event follows them. Event colour is the LifeOS Area, and Sleep and Activities are Health (`colorId` 10, configurable through `TIME_LOG_AREA_COLOR_ID`). Events are timed and transparent, with `reminders.useDefault=false`. Titles are short and have no Project prefix ("Sleep", "Run 10.2 km", "Strength training"). A Source Marker goes in `extendedProperties.private`: `{lifeos: "time-log/1", source: "garmin", garmin_kind, garmin_id}`.
+The Time Log has conventions of its own, and every Timeline Event follows them. Event colour is the LifeOS Area, and Sleep and Activities are Health (`colorId` 10, configurable through `TIME_LOG_AREA_COLOR_ID`). Events are timed and transparent, with `reminders.useDefault=false`. Under the owner's 2026-10-11 title convention, titles are "Health" because no Project is selected. Activity details ("Sleep", "Run 10.2 km", "Strength training") start the description, followed by their measurements. This follows LifeOS ADR 0005: title = Area - Project, or just Area when no Project is selected. A Source Marker goes in `extendedProperties.private`: `{lifeos: "time-log/1", source: "garmin", garmin_kind, garmin_id}`.
 
 ## Consequences
 

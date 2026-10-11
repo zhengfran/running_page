@@ -94,8 +94,8 @@ class TimelineEvent:
 
     def body(self):
         return {
-            "summary": self.title,
-            "description": self.description,
+            "summary": "Health",
+            "description": f"{self.title}\n\n{self.description}",
             "start": {"dateTime": self.start_utc},
             "end": {"dateTime": self.end_utc},
             "colorId": self.color_id,

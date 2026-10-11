@@ -192,7 +192,8 @@ def test_body_follows_time_log_conventions(event):
     # Timed, never all-day.
     assert "date" not in body["start"] and "date" not in body["end"]
     assert body["start"]["dateTime"].endswith("Z")
-    assert not body["summary"].startswith("[")  # no Project prefix
+    assert body["summary"] == "Health"  # no Project selected
+    assert body["description"] == f"{event.title}\n\n{event.description}"
     private = body["extendedProperties"]["private"]
     assert private["lifeos"] == "time-log/1"
     assert private["source"] == "garmin"
@@ -385,7 +386,8 @@ def test_event_deleted_by_the_owner_stays_deleted():
 def test_activity_patch_body_is_none_and_sleep_patch_carries_content():
     assert sync.activity_event(ACTIVITY).patch_body() is None
     patch = sync.sleep_event(SLEEP).patch_body()
-    assert patch["summary"] == "Sleep"
+    assert patch["summary"] == "Health"
+    assert patch["description"].startswith("Sleep\n\n")
     assert patch["colorId"] == "10"
     assert "start" in patch and "end" in patch
     assert "status" not in patch  # a tombstone is never revived
