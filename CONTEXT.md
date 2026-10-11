@@ -59,7 +59,10 @@ A recorded sleep span with a start and an end. Naps are not Sleep — the provid
 _Avoid_: Rest, sleep session, night
 
 **Timeline Calendar**:
-A calendar that receives Timeline Events of one kind. It is the sole store for the Timeline — nothing it holds is written to a repository.
+The calendar that receives Timeline Events: the owner's LifeOS Time Log, which also holds hand-logged time (ADR 0010). It is the sole store for the Timeline — nothing it holds is written to a repository.
+
+**Source Marker**:
+The private extended properties (`lifeos`, `source`, `garmin_kind`, `garmin_id`) that prove the Timeline Sync wrote an event. An event without it is never edited.
 _Avoid_: Google Calendar, target calendar
 
 **Timeline Sync**:

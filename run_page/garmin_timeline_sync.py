@@ -1,30 +1,72 @@
-"""Mirror Garmin Activities and Sleep onto private Timeline Calendars.
+"""Mirror Garmin Activities and Sleep into the owner's LifeOS Time Log.
 
 Nothing here is written to disk. Timeline Event identity is derived from
 Garmin's own record identity, so the calendar is the only state and no
-health data reaches any repository. See docs/garmin-timeline-sync-plan.md.
+health data reaches any repository. See docs/garmin-timeline-sync-plan.md
+and ADR 0010.
 """
 
 import argparse
 import asyncio
 import datetime as dt
+import hashlib
+import json
 import os
 import sys
 from dataclasses import dataclass
 
 sys.path.insert(0, str(os.path.dirname(os.path.abspath(__file__))))
 
-from timeline_calendar_client import TimelineCalendarClient  # noqa: E402
+from timeline_calendar_client import OUTCOMES, TimelineCalendarClient  # noqa: E402
 
 # Google accepts base32hex only: a-v and 0-9, length 5-1024, unique per
 # calendar. A non-conforming id is rejected outright with
-# "400 Invalid resource id value" rather than coerced.
+# "400 Invalid resource id value" rather than coerced. Lowercase hex is a
+# subset, so a hash digest always conforms.
 ID_ALPHABET = set("abcdefghijklmnopqrstuv0123456789")
-ACTIVITY_TAG = "a"
-SLEEP_TAG = "b"
+ID_HEX_LENGTH = 32
 
-WORKOUTS = "workouts"
+SOURCE = "garmin"
+ACTIVITY = "activity"
 SLEEP = "sleep"
+
+# The Source Marker. The Time Log is shared with hand-logged events, so the
+# sync proves authorship through these private extended properties and never
+# touches an event that lacks them.
+MARKER = {"lifeos": "time-log/1", "source": SOURCE}
+
+# LifeOS Area colour: Health is Google event colour 10 (Basil). An event
+# without a colorId is reported as uncategorised, so one is always set.
+DEFAULT_AREA_COLOR_ID = "10"
+VALID_COLOR_IDS = {str(n) for n in range(1, 12)}
+
+# Short, readable titles for the common Garmin activity types; anything else
+# falls back to the type key in sentence case ("Strength training").
+ACTIVITY_TITLES = {
+    "running": "Run",
+    "street_running": "Run",
+    "track_running": "Track run",
+    "treadmill_running": "Treadmill run",
+    "trail_running": "Trail run",
+    "indoor_running": "Indoor run",
+    "virtual_run": "Virtual run",
+    "cycling": "Ride",
+    "road_biking": "Ride",
+    "mountain_biking": "MTB ride",
+    "gravel_cycling": "Gravel ride",
+    "indoor_cycling": "Indoor ride",
+    "virtual_ride": "Virtual ride",
+    "walking": "Walk",
+    "casual_walking": "Walk",
+    "speed_walking": "Walk",
+    "hiking": "Hike",
+    "lap_swimming": "Pool swim",
+    "open_water_swimming": "Open-water swim",
+    "swimming": "Swim",
+    "hiit": "HIIT",
+    "yoga": "Yoga",
+    "pilates": "Pilates",
+}
 
 
 @dataclass(frozen=True)
@@ -38,12 +80,17 @@ class TimelineEvent:
     """
 
     event_id: str
-    calendar: str
+    kind: str
+    garmin_id: str
     title: str
     start_utc: str
     end_utc: str
     description: str
     mutable: bool
+    color_id: str = DEFAULT_AREA_COLOR_ID
+
+    def private_properties(self):
+        return {**MARKER, "garmin_kind": self.kind, "garmin_id": self.garmin_id}
 
     def body(self):
         return {
@@ -51,14 +98,19 @@ class TimelineEvent:
             "description": self.description,
             "start": {"dateTime": self.start_utc},
             "end": {"dateTime": self.end_utc},
+            "colorId": self.color_id,
+            # Time spent, not a commitment: never block free/busy, never ping.
+            "transparency": "transparent",
+            "reminders": {"useDefault": False},
+            "extendedProperties": {"private": self.private_properties()},
         }
 
     def patch_body(self):
-        # Activities are append-only: only status is written, so a tombstone
-        # is revived without rewriting content. Sleep is last-sync-wins.
+        # Activities are append-only: an existing one is never rewritten, so
+        # there is nothing to patch. Sleep is last-sync-wins (ADR 0008).
         if not self.mutable:
-            return {"status": "confirmed"}
-        return {**self.body(), "status": "confirmed"}
+            return None
+        return self.body()
 
 
 def conforming_id(event_id):
@@ -69,12 +121,26 @@ def conforming_id(event_id):
     return event_id
 
 
+def _hashed_id(kind, garmin_id):
+    # Namespaced by source and kind, so a Garmin id can never collide with a
+    # hand-logged event or with another source writing the same Time Log.
+    key = f"{SOURCE}:{kind}:{garmin_id}"
+    return conforming_id(hashlib.sha256(key.encode()).hexdigest()[:ID_HEX_LENGTH])
+
+
 def activity_event_id(activity_id):
-    return conforming_id(ACTIVITY_TAG + str(activity_id).strip())
+    return _hashed_id(ACTIVITY, str(activity_id).strip())
 
 
 def sleep_event_id(calendar_date):
-    return conforming_id(SLEEP_TAG + str(calendar_date).replace("-", "").strip())
+    return _hashed_id(SLEEP, str(calendar_date).strip())
+
+
+def valid_color_id(color_id):
+    color_id = str(color_id or DEFAULT_AREA_COLOR_ID).strip()
+    if color_id not in VALID_COLOR_IDS:
+        raise ValueError(f"Area colorId {color_id!r} is not a Google event colour")
+    return color_id
 
 
 def rfc3339(moment):
@@ -102,14 +168,17 @@ def humanize_seconds(seconds):
 
 
 def pretty_type(type_key):
-    return str(type_key or "activity").replace("_", " ").title()
+    key = str(type_key or "activity").strip().lower()
+    if key in ACTIVITY_TITLES:
+        return ACTIVITY_TITLES[key]
+    return key.replace("_", " ").capitalize()
 
 
 def _line(label, value):
     return f"{label}: {value}" if value is not None else None
 
 
-def activity_event(activity):
+def activity_event(activity, color_id=DEFAULT_AREA_COLOR_ID):
     """Map one Garmin activity. Returns None when it cannot be placed in time."""
     activity_id = activity.get("activityId")
     start_raw = activity.get("startTimeGMT")
@@ -129,7 +198,7 @@ def activity_event(activity):
     distance = activity.get("distance")
     title = type_name
     if distance:
-        title = f"{type_name} · {float(distance) / 1000:.1f} km"
+        title = f"{type_name} {float(distance) / 1000:.1f} km"
 
     moving = activity.get("movingDuration")
     lines = [
@@ -151,16 +220,18 @@ def activity_event(activity):
 
     return TimelineEvent(
         event_id=activity_event_id(activity_id),
-        calendar=WORKOUTS,
+        kind=ACTIVITY,
+        garmin_id=str(activity_id).strip(),
         title=title,
         start_utc=rfc3339(start),
         end_utc=rfc3339(end),
         description="\n".join(line for line in lines if line),
         mutable=False,
+        color_id=color_id,
     )
 
 
-def sleep_event(payload):
+def sleep_event(payload, color_id=DEFAULT_AREA_COLOR_ID):
     """Map one day of Garmin sleep. Returns None when there is no sleep."""
     daily = (payload or {}).get("dailySleepDTO") or {}
     start_raw = daily.get("sleepStartTimestampGMT")
@@ -178,7 +249,8 @@ def sleep_event(payload):
     overall = scores.get("overall") or {}
     score = overall.get("value")
 
-    title = f"Sleep · {score}" if score is not None else "Sleep"
+    # The score stays in the description: Time Log titles stay short.
+    title = "Sleep"
 
     def stage(label, key):
         value = daily.get(key)
@@ -200,14 +272,19 @@ def sleep_event(payload):
         _line("Avg respiration", daily.get("avgRespirationValue")),
     ]
 
+    if end <= start:
+        return None
+
     return TimelineEvent(
         event_id=sleep_event_id(calendar_date),
-        calendar=SLEEP,
+        kind=SLEEP,
+        garmin_id=str(calendar_date).strip(),
         title=title,
         start_utc=rfc3339(start),
         end_utc=rfc3339(end),
         description="\n".join(line for line in lines if line),
         mutable=True,
+        color_id=color_id,
     )
 
 
@@ -249,7 +326,7 @@ def check_sleep_canary(events, dates):
         )
 
 
-async def collect(client, days, today=None):
+async def collect(client, days, today=None, color_id=DEFAULT_AREA_COLOR_ID):
     dates = window_dates(days, today)
     earliest = min(dates)
 
@@ -270,13 +347,13 @@ async def collect(client, days, today=None):
         start_raw = activity.get("startTimeGMT")
         if not start_raw or parse_garmin_gmt(start_raw).date() < earliest:
             continue
-        event = activity_event(activity)
+        event = activity_event(activity, color_id)
         if event:
             activity_events.append(event)
 
     sleep_events = []
     for date in dates:
-        event = sleep_event(await client.get_sleep(date.isoformat()))
+        event = sleep_event(await client.get_sleep(date.isoformat()), color_id)
         if event:
             sleep_events.append(event)
 
@@ -284,18 +361,47 @@ async def collect(client, days, today=None):
     return activity_events + sleep_events
 
 
-def write_events(events, calendars):
-    counts = {"inserted": 0, "patched": 0}
+def write_events(events, calendar):
+    counts = {outcome: 0 for outcome in OUTCOMES}
     for event in events:
-        outcome = calendars[event.calendar].insert_or_patch(
-            event.event_id, event.body(), event.patch_body()
+        outcome = calendar.insert_or_patch(
+            event.event_id, event.body(), event.patch_body(), MARKER
         )
         counts[outcome] += 1
     return counts
 
 
+def preview(events):
+    """One JSON line per event that would be written. No API is called."""
+    lines = []
+    for event in sorted(events, key=lambda e: e.start_utc):
+        lines.append(
+            json.dumps(
+                {
+                    "id": event.event_id,
+                    "title": event.title,
+                    "start": event.start_utc,
+                    "end": event.end_utc,
+                    "colorId": event.color_id,
+                    "private": event.private_properties(),
+                },
+                ensure_ascii=False,
+            )
+        )
+    return "\n".join(lines)
+
+
 async def run(args):
     from garmin_timeline_client import GarminTimelineClient
+
+    color_id = valid_color_id(os.getenv("TIME_LOG_AREA_COLOR_ID"))
+    calendar = None
+    if not args.dry_run:
+        # Fail before the Garmin login, which is rate-limited per account.
+        calendar = TimelineCalendarClient(
+            os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"),
+            os.getenv("TIME_LOG_CALENDAR_ID"),
+        )
 
     client = GarminTimelineClient(
         tokenstore=os.getenv("GARMIN_TOKENS_JSON"),
@@ -304,23 +410,19 @@ async def run(args):
         password=os.getenv("GARMIN_PASSWORD"),
     )
     try:
-        events = await collect(client, args.days)
+        events = await collect(client, args.days, color_id=color_id)
     finally:
         await client.aclose()
 
-    service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-    calendars = {
-        WORKOUTS: TimelineCalendarClient(
-            service_account_json, os.getenv("GCAL_WORKOUTS_CALENDAR_ID")
-        ),
-        SLEEP: TimelineCalendarClient(
-            service_account_json, os.getenv("GCAL_SLEEP_CALENDAR_ID")
-        ),
-    }
-    counts = write_events(events, calendars)
+    if args.dry_run:
+        print(preview(events))
+        print(f"Dry run over {args.days} day(s): {len(events)} event(s), none written")
+        return
+
+    counts = write_events(events, calendar)
     print(
         f"Timeline Sync over {args.days} day(s): "
-        f"{counts['inserted']} inserted, {counts['patched']} patched"
+        + ", ".join(f"{counts[outcome]} {outcome}" for outcome in OUTCOMES)
     )
 
 
@@ -328,6 +430,11 @@ def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--is-cn", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the events that would be written; never call Google",
+    )
     return parser
 
 

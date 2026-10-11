@@ -2,11 +2,11 @@
 
 ## Goal
 
-Mirror Garmin Activities of every type, and Sleep, onto two private Timeline Calendars as Timeline Events carrying real start and end times. The Timeline is a retrospective life-log, independent of the public running history and sharing only the Garmin credentials.
+Mirror Garmin Activities of every type, and Sleep, into the owner's LifeOS Time Log (ADR 0010) as Timeline Events carrying real start and end times. The Timeline is a retrospective life-log, independent of the public running history and sharing only the Garmin credentials.
 
 ## Invariants
 
-- No Timeline data is written to any repository. The Timeline Calendars are the sole store, and the only state (ADR 0006).
+- No Timeline data is written to any repository. The Time Log is the sole store, and the only state (ADR 0006).
 - Timeline Event identity is deterministic and derived from Garmin's own record identity, so every run is idempotent.
 - Routes, coordinates, and `locationName` never leave the mapper. The calendar layer accepts only an allowlisted record.
 - Sleep is rewritten from Garmin on every run inside the Sync Window; Activities are written once and never rewritten (ADR 0008).
@@ -40,8 +40,8 @@ Retry-safe at every stage. A failure part-way leaves already-written Timeline Ev
 
 | Kind | Id | Example |
 | --- | --- | --- |
-| Activity | `a` + `activityId` | `a12345678901` |
-| Sleep | `b` + `calendarDate` as `YYYYMMDD` | `b20260825` |
+| Activity | `sha256("garmin:activity:<activityId>")[:32]` | `5a75670aee8daf017a0f717f5e81b498` |
+| Sleep | `sha256("garmin:sleep:<calendarDate>")[:32]` | `309c86cd5d52533bd7b8f4513c7eb840` |
 
 Google requires base32hex — `a`–`v` and `0`–`9` only, length 5–1024, unique per calendar — and rejects a non-conforming id with `400 Invalid resource id value` rather than coercing it. The tag letter is the namespace.
 
@@ -51,8 +51,12 @@ Sleep is keyed on `calendarDate`, never on its start timestamp: an id derived fr
 
 Both kinds attempt `events.insert` with the deterministic id and branch on `409 duplicate`. Neither path needs a prior `get`, because patching `status` is idempotent.
 
-- **Activity** — on 409, `patch` with `{status: "confirmed"}` only. Content is never rewritten; a tombstone is revived; a live Event is untouched.
-- **Sleep** — on 409, `patch` with the full field set plus `{status: "confirmed"}`.
+On 409 the existing event is fetched once (ADR 0010). If it lacks the Source Marker, it is left alone. If it was deleted by the owner, it stays deleted.
+
+- **Activity**: never rewritten. A live Event is untouched.
+- **Sleep**: `patch` with the full field set.
+
+Every body carries `colorId` (Area, default `10` Health), `transparency: transparent`, `reminders.useDefault: false`, and the Source Marker in `extendedProperties.private`.
 
 All calls set `sendUpdates=none`. `patch`, never `update`: `update` is a full PUT that silently clobbers a hand-made edit.
 
@@ -66,7 +70,7 @@ Times come from Garmin's `*GMT` fields throughout. The `*Local` fields are doubl
 
 | Part | Source |
 | --- | --- |
-| title | composed, e.g. `Running · 10.2 km`, from `activityType.typeKey` and `distance` |
+| title | short, e.g. `Run 10.2 km` or `Strength training`, from `activityType.typeKey` and `distance` |
 | start | `startTimeGMT` |
 | end | start + `elapsedDuration` |
 | description | `distance`, `elapsedDuration`, `movingDuration`, `averageHR`, `maxHR`, `calories`, `elevationGain` |
@@ -77,7 +81,7 @@ Times come from Garmin's `*GMT` fields throughout. The `*Local` fields are doubl
 
 | Part | Source |
 | --- | --- |
-| title | `Sleep · <score>` from `sleepScores.overall.value` |
+| title | `Sleep` (the score goes in the description) |
 | start | `dailySleepDTO.sleepStartTimestampGMT` (epoch ms) |
 | end | `dailySleepDTO.sleepEndTimestampGMT` (epoch ms) |
 | description | `sleepTimeSeconds`, `deepSleepSeconds`, `lightSleepSeconds`, `remSleepSeconds`, `awakeSleepSeconds`, `sleepScores.overall.value` and `.qualifierKey`, `avgSleepHRV`, `avgSpO2`, `avgRespirationValue` |
@@ -89,7 +93,7 @@ Times come from Garmin's `*GMT` fields throughout. The `*Local` fields are doubl
 - Schedule `01:00 UTC`, which is 09:00 Singapore. An hour clear of `garmin_publication.yml` at `00:00 UTC`, so the two jobs never contend for a Garmin login.
 - `workflow_dispatch` exposes a `days` input. The script takes `--days`, defaulting to `7`.
 - The one-time backfill is a dispatch with `days: 30`. Importing more history later is the same dispatch with a larger number, and needs no code change. There is no first-run versus steady-state distinction.
-- Secrets: `GARMIN_TOKENS_JSON`, `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GCAL_WORKOUTS_CALENDAR_ID`, `GCAL_SLEEP_CALENDAR_ID`.
+- Secrets: `GARMIN_TOKENS_JSON`, `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `TIME_LOG_CALENDAR_ID`. Optional repository variable: `TIME_LOG_AREA_COLOR_ID` (default `10`). `--dry-run` prints the events without calling Google.
 
 The schedule barely affects correctness. Running shortly after waking will sometimes catch sleep that Garmin has not finished finalising, and that is fine: the record is rewritten on each of the next six days, because the window self-heals. What the clock does matter for is login contention, which is why the two jobs are kept apart.
 
@@ -113,14 +117,14 @@ Live behaviour was verified once during provisioning, not in CI: tombstone reviv
 ## Rollout
 
 1. Implement and unit-test with the daily schedule absent from the workflow.
-2. Dispatch once with `days: 3` and inspect both Timeline Calendars by hand.
+2. Dispatch once with `days: 3` and inspect the Time Log by hand.
 3. Dispatch once with `days: 30` for the backfill.
 4. Re-dispatch with `days: 30` and confirm nothing duplicates — the idempotency proof.
 5. Enable the `01:00 UTC` schedule.
 
 ## Release Gate
 
-- Both Timeline Calendars contain Events with correct start and end instants, spot-checked against Garmin Connect.
+- The Time Log contains Events with correct start and end instants, spot-checked against Garmin Connect.
 - Every Activity type present in the window appears, not Runs alone.
 - No Timeline Event description contains a location name, coordinate, or route.
 - A repeated backfill creates no duplicates.
