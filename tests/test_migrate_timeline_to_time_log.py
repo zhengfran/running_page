@@ -31,7 +31,7 @@ def test_old_activity_keeps_its_garmin_identity_and_gets_the_time_log_format():
         12345678901
     )  # same id the daily sync uses
     assert (event.title, event.start_utc, event.end_utc) == (
-        "Running 10.2 km",
+        "Run 10.2 km",
         "2026-08-25T06:30:00Z",
         "2026-08-25T07:30:00Z",
     )
@@ -99,3 +99,9 @@ def test_migration_never_patches_existing_events():
     fake = FakeCalendar()
     counts = migrate.migrate([migrate.convert(old)], fake)
     assert fake.calls == [None] and counts["inserted"] == 1
+
+
+def test_old_activity_titles_become_the_daily_sync_titles():
+    assert migrate.activity_title("Running · 10.2 km") == "Run 10.2 km"
+    assert migrate.activity_title("Strength Training") == "Strength training"
+    assert migrate.activity_title("Cycling · 32.5 km") == "Ride 32.5 km"

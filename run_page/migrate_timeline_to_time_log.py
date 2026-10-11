@@ -27,6 +27,7 @@ from garmin_timeline_sync import (  # noqa: E402
     SLEEP,
     TimelineEvent,
     activity_event_id,
+    pretty_type,
     rfc3339,
     sleep_event_id,
     valid_color_id,
@@ -36,6 +37,16 @@ from timeline_calendar_client import OUTCOMES, TimelineCalendarClient  # noqa: E
 OLD_ACTIVITY = re.compile(r"^a(\d+)$")
 OLD_SLEEP = re.compile(r"^b(\d{4})(\d{2})(\d{2})$")
 OLD_SLEEP_TITLE = re.compile(r"^Sleep\s*·\s*(\d+)\s*$")
+OLD_ACTIVITY_TITLE = re.compile(r"^(?P<type>.+?)(?:\s*·\s*(?P<km>\d+(?:\.\d+)?) km)?$")
+
+
+def activity_title(old_title):
+    """'Running · 10.2 km' (old: the type key in title case) -> 'Run 10.2 km', as the daily sync writes it."""
+    match = OLD_ACTIVITY_TITLE.match(old_title.strip())
+    if not match:
+        return old_title.strip() or "Workout"
+    name = pretty_type(match.group("type").replace(" ", "_"))
+    return f"{name} {match.group('km')} km" if match.group("km") else name
 
 
 def _utc(when):
@@ -57,7 +68,7 @@ def convert(old, color_id=DEFAULT_AREA_COLOR_ID):
             event_id=activity_event_id(garmin_id),
             kind=ACTIVITY,
             garmin_id=garmin_id,
-            title=title.replace(" · ", " ") or "Workout",
+            title=activity_title(title) if title else "Workout",
             start_utc=_utc(start),
             end_utc=_utc(end),
             description=description,
