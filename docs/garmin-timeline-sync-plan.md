@@ -90,12 +90,12 @@ Times come from Garmin's `*GMT` fields throughout. The `*Local` fields are doubl
 
 ## Workflow
 
-- Schedule `01:00 UTC`, which is 09:00 Singapore. An hour clear of `garmin_publication.yml` at `00:00 UTC`, so the two jobs never contend for a Garmin login.
+- Schedule twice daily at `01:05` and `13:05 UTC`, which is 09:05 and 21:05 Singapore (`5 1,13 * * *`). The five-minute offset avoids GitHub's busiest top-of-hour scheduling period. The morning slot is an hour and five minutes after `garmin_publication.yml` at `00:00 UTC` to reduce overlap between Garmin logins; GitHub can delay scheduled runs, so the offset does not guarantee that the jobs never overlap.
 - `workflow_dispatch` exposes a `days` input. The script takes `--days`, defaulting to `7`.
 - The one-time backfill is a dispatch with `days: 30`. Importing more history later is the same dispatch with a larger number, and needs no code change. There is no first-run versus steady-state distinction.
 - Secrets: `GARMIN_TOKENS_JSON`, `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `TIME_LOG_CALENDAR_ID`. Optional repository variable: `TIME_LOG_AREA_COLOR_ID` (default `10`). `--dry-run` prints the events without calling Google.
 
-The schedule barely affects correctness. Running shortly after waking will sometimes catch sleep that Garmin has not finished finalising, and that is fine: the record is rewritten on each of the next six days, because the window self-heals. What the clock does matter for is login contention, which is why the two jobs are kept apart.
+The schedule barely affects correctness. Running shortly after waking will sometimes catch sleep that Garmin has not finished finalising, and that is fine: the record is rewritten on each of the next six days, because the window self-heals. The scheduled times are spaced apart to reduce login contention, although delayed starts can still overlap.
 
 ## Failure
 
@@ -116,11 +116,11 @@ Live behaviour was verified once during provisioning, not in CI: tombstone reviv
 
 ## Rollout
 
-1. Implement and unit-test with the daily schedule absent from the workflow.
+1. Implement and unit-test with the twice-daily schedule absent from the workflow.
 2. Dispatch once with `days: 3` and inspect the Time Log by hand.
 3. Dispatch once with `days: 30` for the backfill.
 4. Re-dispatch with `days: 30` and confirm nothing duplicates — the idempotency proof.
-5. Enable the `01:00 UTC` schedule.
+5. Enable the twice-daily `01:05` and `13:05 UTC` schedule (09:05 and 21:05 Singapore).
 
 ## Release Gate
 

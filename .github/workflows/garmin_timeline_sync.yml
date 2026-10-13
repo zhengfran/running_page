@@ -1,10 +1,10 @@
 name: Garmin Timeline Sync
 
 on:
-  # 09:00 and 21:00 Singapore. Kept an hour clear of garmin_publication.yml at
-  # 00:00 UTC so the two jobs never contend for a Garmin login.
+  # 09:05 and 21:05 Singapore. Avoid the busy start of the hour and keep the
+  # morning slot after garmin_publication.yml at 00:00 UTC to reduce login overlap.
   schedule:
-    - cron: '0 1,13 * * *'
+    - cron: '5 1,13 * * *'
   workflow_dispatch:
     inputs:
       days:
