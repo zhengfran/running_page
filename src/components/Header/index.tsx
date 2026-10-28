@@ -33,14 +33,13 @@ const Header = () => {
           Zhicheng
         </a>
         <p>
-          {t('Embedded engineer', '嵌入式工程师')}
+          {t('Enginner', '工程师')}
           <br />
-          {t('and runner', '与跑者')}
+          {t('and Runner', '与跑者')}
         </p>
       </div>
       <nav className={styles.nav} aria-label={t('Primary navigation', '主导航')}>
         <a href={`${mainSite}/`}>{t('Home', '首页')}</a>
-        <a href={`${mainSite}/projects.html`}>{t('Projects', '项目')}</a>
         <a href={`${mainSite}/writing.html`}>{t('Writing', '写作')}</a>
         <a href="/" aria-current="page">
           {t('Running', '跑步')}

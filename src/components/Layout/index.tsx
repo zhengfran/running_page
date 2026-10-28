@@ -13,10 +13,10 @@ const Layout = ({ children }: React.PropsWithChildren) => {
   return (
     <>
       <Helmet htmlAttributes={{ lang: language === 'zh' ? 'zh-CN' : 'en' }} bodyAttributes={{ class: styles.body }}>
-        <title>{language === 'zh' ? '跑步探索器 — 郑智诚' : siteTitle}</title>
+        <title>{language === 'zh' ? '跑步探索器 — 郑之成' : siteTitle}</title>
         <meta
           name="description"
-          content={language === 'zh' ? '郑智诚的跑步记录、路线与年度轨迹。' : description}
+          content={language === 'zh' ? '郑之成的跑步记录、路线与年度轨迹。' : description}
         />
         <meta name="keywords" content="running, running history, running map" />
       </Helmet>
