@@ -29,8 +29,15 @@ const Header = () => {
     <aside className={styles.rail}>
       <div className={styles.identity}>
         <a className={styles.name} href={`${mainSite}/`}>
-          Zheng<br />
-          Zhicheng
+          {language === 'zh' ? (
+            '郑之成'
+          ) : (
+            <>
+              Zheng
+              <br />
+              Zhicheng
+            </>
+          )}
         </a>
         <p>
           {t('Enginner', '工程师')}
